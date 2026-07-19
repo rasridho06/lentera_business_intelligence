@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,12 +53,10 @@ export function MetricsBuilderView() {
     setLoading(false);
   }, []);
 
-  // Load on mount
-  const [initMetrics] = useState(() => {
-    setTimeout(() => { loadMetrics(); }, 0);
-    return true;
-  });
-  void initMetrics;
+  useEffect(() => {
+    const timer = setTimeout(loadMetrics, 0);
+    return () => clearTimeout(timer);
+  }, [loadMetrics]);
 
   const handleCreate = async () => {
     await fetch('/api/metric-defs', {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,12 +40,10 @@ export function TransformsView() {
     setLoading(false);
   }, []);
 
-  // Load on mount
-  const [initTransforms] = useState(() => {
-    setTimeout(() => { loadTransforms(); }, 0);
-    return true;
-  });
-  void initTransforms;
+  useEffect(() => {
+    const timer = setTimeout(loadTransforms, 0);
+    return () => clearTimeout(timer);
+  }, [loadTransforms]);
 
   const handleCreate = async () => {
     await fetch('/api/transforms', {

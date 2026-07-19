@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,11 +51,10 @@ export function DatasetsView() {
     setLoading(false);
   }, []);
 
-  const [initDatasets] = useState(() => {
-    setTimeout(() => { loadDatasets(); }, 0);
-    return true;
-  });
-  void initDatasets;
+  useEffect(() => {
+    const timer = setTimeout(loadDatasets, 0);
+    return () => clearTimeout(timer);
+  }, [loadDatasets]);
 
   const handleCreate = async () => {
     await fetch('/api/datasets', {

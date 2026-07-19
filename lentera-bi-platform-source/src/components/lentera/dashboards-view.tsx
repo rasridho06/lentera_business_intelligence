@@ -98,12 +98,10 @@ export function DashboardsView() {
     setLoading(false);
   }, []);
 
-  // Load on mount
-  const [initDashboards] = useState(() => {
-    setTimeout(() => { loadDashboards(); }, 0);
-    return true;
-  });
-  void initDashboards;
+  useEffect(() => {
+    const timer = setTimeout(loadDashboards, 0);
+    return () => clearTimeout(timer);
+  }, [loadDashboards]);
 
   // Simulate collaborative cursors when viewing a dashboard
   useEffect(() => {
