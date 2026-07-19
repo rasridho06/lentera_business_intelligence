@@ -4,36 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, XCircle, Info, Shield, GitBranch, Database, BarChart3, FileText } from 'lucide-react';
-
-interface AuditData {
-  findings: Array<{
-    id: string;
-    ruleId: string;
-    ruleVersion: string;
-    severity: string;
-    title: string;
-    description: string;
-    evidence: Record<string, unknown> | null;
-    recommendation: string | null;
-    status: string;
-    suppressionReason: string | null;
-    node: {
-      id: string;
-      name: string;
-      type: string;
-      platform: string;
-      qualifiedName: string;
-    } | null;
-    createdAt: string;
-  }>;
-  rules: Array<{
-    id: string;
-    name: string;
-    description: string;
-  }>;
-  severityCounts: Record<string, number>;
-  total: number;
-}
+import type { AuditData } from '@/types';
 
 const severityConfig: Record<string, { icon: React.ReactNode; color: string; bg: string; badge: string }> = {
   critical: { icon: <XCircle className="h-4 w-4" />, color: 'text-red-700', bg: 'bg-red-50 border-red-200', badge: 'destructive' },

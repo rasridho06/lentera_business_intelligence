@@ -8,32 +8,7 @@ import { AlertTriangle, Database, GitBranch, BarChart3, LayoutDashboard, LineCha
 import ReactFlow, { Node, Edge, Background, Controls, MiniMap, useNodesState, useEdgesState, MarkerType, NodeProps, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-
-interface LineageData {
-  nodes: Array<{
-    id: string;
-    externalId: string;
-    name: string;
-    type: string;
-    platform: string;
-    qualifiedName: string;
-    description: string | null;
-    owner: string | null;
-    status: string | null;
-    metadata: Record<string, unknown> | null;
-    findings: number;
-  }>;
-  edges: Array<{
-    id: string;
-    source: string;
-    target: string;
-    type: string;
-    confidence: string;
-    extractionMethod: string | null;
-    expression: string | null;
-    sourcePlatform: string | null;
-  }>;
-}
+import type { LineageData } from '@/types';
 
 const typeConfig: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode; label: string }> = {
   source: { color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-300', icon: <Database className="h-3.5 w-3.5" />, label: 'Source' },

@@ -18,35 +18,7 @@ import {
   Upload, FileText, FileSpreadsheet, FileJson, FileArchive,
   Loader2, Wifi, WifiOff, Zap, HardDrive,
 } from 'lucide-react';
-
-interface DataSourceTable {
-  id: string;
-  connectorId: string;
-  schema: string | null;
-  name: string;
-  type: string;
-  rowCount: number | null;
-  sizeBytes: number | null;
-  columns: string | null;
-}
-
-interface Connector {
-  id: string;
-  name: string;
-  type: string;
-  category: string;
-  host: string | null;
-  port: number | null;
-  database: string | null;
-  username: string | null;
-  password: string | null;
-  schema: string | null;
-  filePath: string | null;
-  fileConfig: string | null;
-  status: string;
-  lastSyncAt: string | null;
-  tables: DataSourceTable[];
-}
+import type { Connector, DataSourceTable, ConnectionTestResult, FileUploadResult } from '@/types';
 
 const MAX_FILE_SIZE_MB = 100;
 
@@ -73,35 +45,7 @@ const tableTypeIcons: Record<string, React.ReactNode> = {
   materialized_view: <LayoutGrid className="h-4 w-4" />,
 };
 
-// ── Connection test result ──
-interface ConnectionTestResult {
-  success: boolean;
-  message: string;
-  latency?: number;
-  tables?: Array<{ schema: string; name: string; type: string; rowCount: number }>;
-  version?: string;
-  error?: string;
-}
 
-// ── File upload result ──
-interface FileUploadResult {
-  success: boolean;
-  file?: {
-    name: string;
-    storedName: string;
-    type: string;
-    size: number;
-    sizeMB: string;
-  };
-  schema?: {
-    columns: Array<{ name: string; type: string; nullable: boolean; sample?: unknown }>;
-    rowCount: number;
-    detectedType: string;
-  };
-  preview?: Record<string, unknown>[];
-  error?: string;
-  parseError?: string;
-}
 
 export function ConnectorsView() {
   const [connectors, setConnectors] = useState<Connector[]>([]);

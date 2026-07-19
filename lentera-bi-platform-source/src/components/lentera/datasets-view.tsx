@@ -15,25 +15,7 @@ import {
   CheckCircle, XCircle, Loader2, GitBranch, Table2, Layers,
   FileCode, ArrowRight, Link2,
 } from 'lucide-react';
-
-interface DatasetData {
-  id: string;
-  name: string;
-  description: string | null;
-  type: string;
-  language: string;
-  code: string | null;
-  sourceTables: string | null;
-  outputColumns: string | null;
-  connectorId: string | null;
-  schedule: string | null;
-  lastRunAt: string | null;
-  lastRunStatus: string | null;
-  status: string;
-  branch: string;
-  ownerUserId: string | null;
-  dashboardId: string | null;
-}
+import type { DatasetData } from '@/types';
 
 const typeConfig: Record<string, { icon: React.ReactNode; color: string; bg: string; label: string }> = {
   virtual: { icon: <Layers className="h-4 w-4" />, color: 'text-sky-700', bg: 'bg-sky-50', label: 'Virtual' },

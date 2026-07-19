@@ -5,73 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AlertTriangle, Database, GitBranch, BarChart3, LayoutDashboard, LineChart, AlertCircle, CheckCircle, ArrowUp, ArrowDown, Filter, Clock } from 'lucide-react';
-
-interface NodeDetailData {
-  node: {
-    id: string;
-    externalId: string;
-    name: string;
-    type: string;
-    platform: string;
-    qualifiedName: string;
-    description: string | null;
-    owner: string | null;
-    status: string | null;
-    metadata: Record<string, unknown> | null;
-    createdAt: string;
-    updatedAt: string;
-  };
-  upstream: Array<{
-    edgeId: string;
-    edgeType: string;
-    confidence: string;
-    expression: string | null;
-    node: {
-      id: string;
-      name: string;
-      type: string;
-      platform: string;
-      qualifiedName: string;
-    };
-  }>;
-  downstream: Array<{
-    edgeId: string;
-    edgeType: string;
-    confidence: string;
-    expression: string | null;
-    node: {
-      id: string;
-      name: string;
-      type: string;
-      platform: string;
-      qualifiedName: string;
-    };
-  }>;
-  findings: Array<{
-    id: string;
-    ruleId: string;
-    severity: string;
-    title: string;
-    description: string;
-    evidence: Record<string, unknown> | null;
-    recommendation: string | null;
-    status: string;
-  }>;
-  canonicalComparison: {
-    canonical: {
-      id: string;
-      name: string;
-      expression: string | null;
-      aggregation: string | null;
-      requiredFilters: string[];
-      dimensions: string[];
-    };
-    observed: {
-      name: string;
-      metadata: Record<string, unknown>;
-    };
-  } | null;
-}
+import type { NodeDetailData } from '@/types';
 
 const typeIcons: Record<string, React.ReactNode> = {
   source: <Database className="h-5 w-5" />,
@@ -137,15 +71,15 @@ export function NodeDetailView({ data }: { data: NodeDetailData }) {
                 <h2 className="text-xl font-bold">{node.name}</h2>
                 <Badge variant="outline" className="text-xs capitalize">{node.type.replace('_', ' ')}</Badge>
                 <Badge variant="outline" className="text-xs">{node.platform}</Badge>
-                {node.status && <Badge variant={node.status === 'excluded' ? 'destructive' : node.status === 'active' ? 'secondary' : 'outline'} className="text-xs capitalize">{node.status}</Badge>}
+                {!!node.status && <Badge variant={node.status === 'excluded' ? 'destructive' : node.status === 'active' ? 'secondary' : 'outline'} className="text-xs capitalize">{node.status}</Badge>}
               </div>
               <p className="text-sm font-mono text-muted-foreground mt-0.5">{node.qualifiedName}</p>
-              {node.description && <p className="text-sm text-muted-foreground mt-2">{node.description}</p>}
+              {!!node.description && <p className="text-sm text-muted-foreground mt-2">{node.description}</p>}
               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                {node.owner && <span>Owner: <strong>{node.owner}</strong></span>}
-                {node.metadata?.materialization && <span>Type: <code>{node.metadata.materialization as string}</code></span>}
-                {node.metadata?.schema && <span>Schema: <code>{node.metadata.schema as string}</code></span>}
-                {node.metadata?.vizType && <span>Viz: <code>{node.metadata.vizType as string}</code></span>}
+                {!!node.owner && <span>Owner: <strong>{node.owner}</strong></span>}
+                {!!node.metadata?.materialization && <span>Type: <code>{node.metadata.materialization as string}</code></span>}
+                {!!node.metadata?.schema && <span>Schema: <code>{node.metadata.schema as string}</code></span>}
+                {!!node.metadata?.vizType && <span>Viz: <code>{node.metadata.vizType as string}</code></span>}
               </div>
             </div>
           </div>
@@ -210,8 +144,8 @@ export function NodeDetailView({ data }: { data: NodeDetailData }) {
               <div className="p-3 bg-violet-50 rounded-lg border border-violet-200">
                 <p className="text-xs font-medium text-violet-800 mb-2">Observed: {canonicalComparison.observed.name}</p>
                 <div className="space-y-1 text-xs">
-                  {canonicalComparison.observed.metadata?.expression && <div><span className="text-muted-foreground">Expression:</span> <code>{canonicalComparison.observed.metadata.expression as string}</code></div>}
-                  {canonicalComparison.observed.metadata?.aggregation && <div><span className="text-muted-foreground">Aggregation:</span> <code className="uppercase">{canonicalComparison.observed.metadata.aggregation as string}</code></div>}
+                  {!!canonicalComparison.observed.metadata?.expression && <div><span className="text-muted-foreground">Expression:</span> <code>{canonicalComparison.observed.metadata.expression as string}</code></div>}
+                  {!!canonicalComparison.observed.metadata?.aggregation && <div><span className="text-muted-foreground">Aggregation:</span> <code className="uppercase">{canonicalComparison.observed.metadata.aggregation as string}</code></div>}
                 </div>
               </div>
             </div>

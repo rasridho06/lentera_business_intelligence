@@ -5,38 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, CheckCircle, AlertCircle, Info, Database, BarChart3, LineChart, LayoutDashboard, GitBranch, TrendingDown } from 'lucide-react';
-
-interface OverviewData {
-  buildRun: {
-    status: string;
-    totalModels: number;
-    totalDatasets: number;
-    totalCharts: number;
-    totalDashboards: number;
-    unresolvedCount: number;
-    lineageCoverage: number;
-    errorFindings: number;
-    warningFindings: number;
-    criticalFindings: number;
-    infoFindings: number;
-    duration: number;
-    createdAt: string;
-  } | null;
-  nodeCounts: Record<string, number>;
-  severityCounts: Record<string, number>;
-  totalNodes: number;
-  totalEdges: number;
-  totalCanonicalMetrics: number;
-  lineageCoverage: number;
-  driftFindings: Array<{
-    id: string;
-    title: string;
-    severity: string;
-    node: string;
-    evidence: Record<string, unknown> | null;
-  }>;
-  platformCounts: Record<string, number>;
-}
+import type { OverviewData } from '@/types';
 
 export function OverviewView({ data }: { data: OverviewData }) {
   const run = data.buildRun;

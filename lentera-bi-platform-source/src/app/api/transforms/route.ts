@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { createTransformSchema, updateTransformSchema, validateBody } from '@/lib/validations';
 
 export async function GET() {
   try {
@@ -14,6 +15,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(createTransformSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const transform = await db.transform.create({
       data: {
         name: body.name,
@@ -40,6 +43,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(updateTransformSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const transform = await db.transform.update({
       where: { id: body.id },
       data: {

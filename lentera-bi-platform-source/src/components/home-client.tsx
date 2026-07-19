@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,11 +12,12 @@ import {
   LayoutDashboard, GitBranch, Shield, LineChart, Search,
   Database, BarChart3, AlertTriangle, ChevronRight, ArrowLeft,
   Menu, X, Lamp, Code2, Terminal, Users, GitMerge, Cable,
-  Layers, Wrench, FileSpreadsheet, Upload,
+  Layers, Wrench, FileSpreadsheet, Upload, Sun, Moon,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { ThemeToggle } from '@/components/theme-toggle';
 
-// Dynamic imports for heavy components to reduce initial bundle
 const OverviewView = dynamic(() => import('@/components/lentera/overview-view').then(m => ({ default: m.OverviewView })), { ssr: false });
 const LineageView = dynamic(() => import('@/components/lentera/lineage-view').then(m => ({ default: m.LineageView })), { ssr: false });
 const LineageEnhancedView = dynamic(() => import('@/components/lentera/lineage-enhanced-view').then(m => ({ default: m.LineageEnhancedView })), { ssr: false });
@@ -28,17 +30,17 @@ const DashboardsView = dynamic(() => import('@/components/lentera/dashboards-vie
 const MetricsBuilderView = dynamic(() => import('@/components/lentera/metrics-builder-view').then(m => ({ default: m.MetricsBuilderView })), { ssr: false });
 const TransformsView = dynamic(() => import('@/components/lentera/transforms-view').then(m => ({ default: m.TransformsView })), { ssr: false });
 const CollaborationView = dynamic(() => import('@/components/lentera/collaboration-view').then(m => ({ default: m.CollaborationView })), { ssr: false });
+const QueryView = dynamic(() => import('@/components/lentera/query-view').then(m => ({ default: m.QueryView })), { ssr: false });
 const ChartsView = dynamic(() => import('@/components/lentera/charts-view').then(m => ({ default: m.ChartsView })), { ssr: false });
 const DatasetsView = dynamic(() => import('@/components/lentera/datasets-view').then(m => ({ default: m.DatasetsView })), { ssr: false });
 
 type ViewType = 'overview' | 'lineage' | 'audit' | 'metrics' | 'impact' | 'detail' | 'search'
-  | 'connectors' | 'dashboards' | 'charts' | 'datasets' | 'metrics-builder' | 'transforms' | 'collaboration';
+  | 'connectors' | 'dashboards' | 'charts' | 'datasets' | 'metrics-builder' | 'transforms' | 'collaboration' | 'query';
 
 interface NavItem {
   id: ViewType;
   label: string;
   icon: React.ReactNode;
-  section?: string;
 }
 
 const navSections = [
@@ -51,6 +53,7 @@ const navSections = [
       { id: 'datasets' as ViewType, label: 'Datasets', icon: <FileSpreadsheet className="h-4 w-4" /> },
       { id: 'metrics-builder' as ViewType, label: 'Metrics', icon: <Layers className="h-4 w-4" /> },
       { id: 'transforms' as ViewType, label: 'Transforms', icon: <Wrench className="h-4 w-4" /> },
+      { id: 'query' as ViewType, label: 'SQL Query', icon: <Terminal className="h-4 w-4" /> },
     ],
   },
   {
@@ -73,7 +76,6 @@ const navSections = [
 
 const allNavItems = navSections.flatMap(s => s.items);
 
-// Loading spinner for dynamic imports
 function ComponentLoader() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -83,136 +85,90 @@ function ComponentLoader() {
   );
 }
 
-// Data cache
-const dataCache: Record<string, unknown> = {};
-
-async function fetchData<T>(key: string, url: string): Promise<T> {
-  if (dataCache[key]) return dataCache[key] as T;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error(`Fetch ${url} failed: ${res.status}`);
-      return {} as T;
-    }
-    const data = await res.json();
-    dataCache[key] = data;
-    return data as T;
-  } catch (err) {
-    console.error(`Fetch ${url} error:`, err);
-    return {} as T;
-  }
+function fetcher(url: string) {
+  return fetch(url).then(r => { if (!r.ok) throw new Error(`Fetch ${url} failed: ${r.status}`); return r.json(); });
 }
 
 export default function HomeClient() {
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [overviewData, setOverviewData] = useState<Record<string, unknown> | null>(null);
-  const [lineageData, setLineageData] = useState<Record<string, unknown> | null>(null);
-  const [auditData, setAuditData] = useState<Record<string, unknown> | null>(null);
-  const [metricsData, setMetricsData] = useState<Record<string, unknown> | null>(null);
-  const [nodeDetailData, setNodeDetailData] = useState<Record<string, unknown> | null>(null);
-  const [impactData, setImpactData] = useState<Record<string, unknown> | null>(null);
+  const [nodeDetailId, setNodeDetailId] = useState<string | null>(null);
+  const [impactNodeId, setImpactNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Array<Record<string, unknown>>>([]);
-  const [loading, setLoading] = useState(false);
-  const [auditBadgeCount, setAuditBadgeCount] = useState(0);
+  const [searchActive, setSearchActive] = useState('');
 
-  const loadOverview = useCallback(async () => {
-    try {
-      const data = await fetchData<Record<string, unknown>>('overview', '/api/overview');
-      if (data && typeof data === 'object' && 'severityCounts' in data) {
-        setOverviewData(data);
-        const sc = data.severityCounts as Record<string, number>;
-        if (sc) setAuditBadgeCount((sc.critical || 0) + (sc.error || 0));
-      }
-    } catch (err) {
-      console.error('Failed to load overview:', err);
-    }
-  }, []);
+  const { data: overviewData } = useQuery({
+    queryKey: ['overview'],
+    queryFn: () => fetcher('/api/overview'),
+    staleTime: 60_000,
+  });
 
-  const loadLineage = useCallback(async () => {
-    try {
-      const data = await fetchData<Record<string, unknown>>('lineage', '/api/lineage');
-      if (data && typeof data === 'object') setLineageData(data);
-    } catch (err) {
-      console.error('Failed to load lineage:', err);
-    }
-  }, []);
+  const auditBadgeCount = overviewData
+    ? ((overviewData as Record<string, Record<string, number>>).severityCounts?.critical || 0) +
+      ((overviewData as Record<string, Record<string, number>>).severityCounts?.error || 0)
+    : 0;
 
-  const loadAudit = useCallback(async () => {
-    try {
-      const data = await fetchData<Record<string, unknown>>('audit', '/api/audit');
-      if (data && typeof data === 'object') setAuditData(data);
-    } catch (err) {
-      console.error('Failed to load audit:', err);
-    }
-  }, []);
+  const { data: lineageData } = useQuery({
+    queryKey: ['lineage'],
+    queryFn: () => fetcher('/api/lineage'),
+    enabled: currentView === 'lineage',
+  });
 
-  const loadMetrics = useCallback(async () => {
-    try {
-      const data = await fetchData<Record<string, unknown>>('metrics', '/api/metrics');
-      if (data && typeof data === 'object') setMetricsData(data);
-    } catch (err) {
-      console.error('Failed to load metrics:', err);
-    }
-  }, []);
+  const { data: auditData } = useQuery({
+    queryKey: ['audit'],
+    queryFn: () => fetcher('/api/audit'),
+    enabled: currentView === 'audit',
+  });
 
-  const loadNodeDetail = useCallback(async (nodeId: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/nodes?id=${encodeURIComponent(nodeId)}`);
-      const data = await res.json();
-      setNodeDetailData(data);
-      setCurrentView('detail');
-    } catch (err) {
-      console.error('Failed to load node detail:', err);
-    }
-    setLoading(false);
-  }, []);
+  const { data: metricsData } = useQuery({
+    queryKey: ['metrics'],
+    queryFn: () => fetcher('/api/metrics'),
+    enabled: currentView === 'metrics',
+  });
 
-  const loadImpact = useCallback(async (nodeId: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/impact?nodeId=${encodeURIComponent(nodeId)}&direction=downstream`);
-      const data = await res.json();
-      setImpactData(data);
-    } catch (err) {
-      console.error('Failed to load impact:', err);
-    }
-    setLoading(false);
-  }, []);
+  const { data: nodeDetailData, isFetching: detailLoading } = useQuery({
+    queryKey: ['node-detail', nodeDetailId],
+    queryFn: () => fetcher(`/api/nodes?id=${encodeURIComponent(nodeDetailId!)}`),
+    enabled: !!nodeDetailId,
+  });
 
-  const handleSearch = useCallback(async (query?: string) => {
-    const q = query || searchQuery;
-    if (!q.trim() || q.length < 2) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      setSearchResults(data.results || []);
-      setCurrentView('search');
-    } catch (err) {
-      console.error('Search failed:', err);
-    }
-    setLoading(false);
-  }, [searchQuery]);
+  const { data: impactData, isFetching: impactLoading } = useQuery({
+    queryKey: ['impact', impactNodeId],
+    queryFn: () => fetcher(`/api/impact?nodeId=${encodeURIComponent(impactNodeId!)}&direction=downstream`),
+    enabled: !!impactNodeId,
+  });
 
-  const switchView = useCallback((view: ViewType) => {
+  const { data: searchResults, isFetching: searchLoading } = useQuery({
+    queryKey: ['search', searchActive],
+    queryFn: () => fetcher(`/api/search?q=${encodeURIComponent(searchActive)}`).then(d => (d as Record<string, unknown[]>).results || []),
+    enabled: !!searchActive && searchActive.length >= 2,
+  });
+
+  const loading = detailLoading || impactLoading || searchLoading;
+
+  const switchView = (view: ViewType) => {
     setCurrentView(view);
-    if (view === 'overview') loadOverview();
-    else if (view === 'lineage') loadLineage();
-    else if (view === 'audit') loadAudit();
-    else if (view === 'metrics') loadMetrics();
-  }, [loadOverview, loadLineage, loadAudit, loadMetrics]);
+    if (view !== 'detail') setNodeDetailId(null);
+    if (view !== 'impact') setImpactNodeId(null);
+    if (view !== 'search') setSearchActive('');
+  };
 
-  const handleImpactSearch = useCallback((nodeId: string) => {
-    loadImpact(nodeId);
-  }, [loadImpact]);
+  const handleNodeSelect = (nodeId: string) => {
+    setNodeDetailId(nodeId);
+    setCurrentView('detail');
+  };
 
-  // Initial load
-  useEffect(() => {
-    loadOverview();
-  }, [loadOverview]);
+  const handleImpactSearch = (nodeId: string) => {
+    setImpactNodeId(nodeId);
+    setCurrentView('impact');
+  };
+
+  const handleSearch = (query?: string) => {
+    const q = query ?? searchQuery;
+    if (!q.trim() || q.length < 2) return;
+    setSearchActive(q);
+    setCurrentView('search');
+  };
 
   const navigateBack = () => {
     if (currentView === 'detail') switchView('lineage');
@@ -234,9 +190,7 @@ export default function HomeClient() {
   return (
     <TooltipProvider>
       <div className="min-h-screen flex bg-background">
-        {/* Sidebar */}
         <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} border-r bg-card transition-all duration-200 flex flex-col shrink-0`}>
-          {/* Logo */}
           <div className="p-4 border-b flex items-center gap-2">
             <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-600 text-white shrink-0">
               <Lamp className="h-4 w-4" />
@@ -249,7 +203,6 @@ export default function HomeClient() {
             )}
           </div>
 
-          {/* Navigation Sections */}
           <nav className="flex-1 overflow-y-auto p-2">
             {navSections.map((section) => (
               <div key={section.label} className="mb-4">
@@ -289,7 +242,6 @@ export default function HomeClient() {
             ))}
           </nav>
 
-          {/* Global Search */}
           {sidebarOpen && (
             <div className="p-3 border-t">
               <div className="flex gap-1.5">
@@ -307,7 +259,6 @@ export default function HomeClient() {
             </div>
           )}
 
-          {/* Active Users */}
           {sidebarOpen && (
             <div className="p-3 border-t">
               <div className="flex items-center gap-2 mb-2">
@@ -330,7 +281,6 @@ export default function HomeClient() {
             </div>
           )}
 
-          {/* Project Info */}
           {sidebarOpen && (
             <div className="p-3 border-t">
               <div className="text-[10px] text-muted-foreground">
@@ -340,20 +290,18 @@ export default function HomeClient() {
             </div>
           )}
 
-          {/* Collapse button */}
-          <div className="p-2 border-t">
+          <div className="p-2 border-t flex gap-1">
+            <ThemeToggle sidebarOpen={sidebarOpen} />
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+              className="flex-1 flex items-center justify-center p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
             >
               {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="flex-1 min-w-0">
-          {/* Header */}
           <header className="border-b px-6 py-3 flex items-center justify-between bg-card">
             <div className="flex items-center gap-2">
               {(currentView === 'detail' || currentView === 'search') && (
@@ -378,7 +326,6 @@ export default function HomeClient() {
             </div>
           </header>
 
-          {/* Content Area */}
           <ScrollArea className="h-[calc(100vh-57px)]">
             <div className="p-6 max-w-7xl mx-auto">
               {loading && (
@@ -388,7 +335,6 @@ export default function HomeClient() {
                 </div>
               )}
 
-              {/* BI Platform Views - with Error Boundaries */}
               {!loading && currentView === 'connectors' && (
                 <ErrorBoundary><Suspense fallback={<ComponentLoader />}><ConnectorsView /></Suspense></ErrorBoundary>
               )}
@@ -410,38 +356,40 @@ export default function HomeClient() {
               {!loading && currentView === 'collaboration' && (
                 <ErrorBoundary><Suspense fallback={<ComponentLoader />}><CollaborationView /></Suspense></ErrorBoundary>
               )}
+              {!loading && currentView === 'query' && (
+                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><QueryView /></Suspense></ErrorBoundary>
+              )}
 
-              {/* Legacy Lineage & Audit Views */}
               {!loading && currentView === 'overview' && overviewData && (
-                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><OverviewView data={overviewData as Parameters<typeof OverviewView>[0]['data']} /></Suspense></ErrorBoundary>
+                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><OverviewView data={overviewData as any} /></Suspense></ErrorBoundary>
               )}
               {!loading && currentView === 'lineage' && lineageData && (
-                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><LineageView data={lineageData as Parameters<typeof LineageView>[0]['data']} /></Suspense></ErrorBoundary>
+                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><LineageView data={lineageData as any} /></Suspense></ErrorBoundary>
               )}
               {!loading && currentView === 'audit' && auditData && (
-                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><AuditView data={auditData as Parameters<typeof AuditView>[0]['data']} /></Suspense></ErrorBoundary>
+                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><AuditView data={auditData as any} /></Suspense></ErrorBoundary>
               )}
               {!loading && currentView === 'metrics' && metricsData && (
-                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><MetricsView data={metricsData as Parameters<typeof MetricsView>[0]['data']} /></Suspense></ErrorBoundary>
+                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><MetricsView data={metricsData as any} /></Suspense></ErrorBoundary>
               )}
               {!loading && currentView === 'impact' && (
-                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><ImpactView data={impactData as Parameters<typeof ImpactView>[0]['data']} onSearch={handleImpactSearch} /></Suspense></ErrorBoundary>
+                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><ImpactView data={impactData as any} onSearch={handleImpactSearch} /></Suspense></ErrorBoundary>
               )}
               {!loading && currentView === 'detail' && nodeDetailData && (
-                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><NodeDetailView data={nodeDetailData as Parameters<typeof NodeDetailView>[0]['data']} /></Suspense></ErrorBoundary>
+                <ErrorBoundary><Suspense fallback={<ComponentLoader />}><NodeDetailView data={nodeDetailData as any} /></Suspense></ErrorBoundary>
               )}
 
               {!loading && currentView === 'search' && (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
+                    {(searchResults as Record<string, unknown>[]).length} result{(searchResults as Record<string, unknown>[]).length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
                   </p>
-                  {searchResults.map((r) => {
+                  {(searchResults as Record<string, unknown>[]).map((r) => {
                     const t = r.type as string;
                     return (
                       <button
                         key={r.id as string}
-                        onClick={() => loadNodeDetail(r.id as string)}
+                        onClick={() => handleNodeSelect(r.id as string)}
                         className="w-full text-left p-4 rounded-lg border hover:bg-muted transition-colors flex items-center gap-4"
                       >
                         <div className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${
@@ -474,7 +422,6 @@ export default function HomeClient() {
                 </div>
               )}
 
-              {/* Empty/loading states for legacy views */}
               {!loading && currentView === 'overview' && !overviewData && (
                 <div className="text-center py-20"><LayoutDashboard className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><p>Loading overview...</p></div>
               )}

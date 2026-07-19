@@ -9,33 +9,7 @@ import {
   Users, GitMerge, GitBranch, CheckCircle, XCircle, AlertTriangle,
   Clock, MessageSquare, ArrowRight, Eye, UserPlus, LayoutDashboard,
 } from 'lucide-react';
-
-interface MergeRequestData {
-  id: string;
-  dashboardId: string;
-  sourceBranchId: string;
-  targetBranch: string;
-  title: string;
-  description: string | null;
-  status: string;
-  conflictDetails: string | null;
-  ownerUserId: string | null;
-  reviewerUserId: string | null;
-  mergedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  sourceBranch: { id: string; name: string; dashboard: { name: string } } | null;
-}
-
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string | null;
-  role: string;
-  color: string | null;
-  activities: Array<{ id: string; entityType: string; entityId: string; action: string; details: string | null; createdAt: string }>;
-}
+import type { MergeRequestData, CollaborationUserData } from '@/types';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; bg: string; label: string }> = {
   open: { icon: <Eye className="h-4 w-4" />, color: 'text-sky-700', bg: 'bg-sky-50 border-sky-200', label: 'Open' },
@@ -47,7 +21,7 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; bg: s
 
 export function CollaborationView() {
   const [mergeRequests, setMergeRequests] = useState<MergeRequestData[]>([]);
-  const [users, setUsers] = useState<UserData[]>([]);
+  const [users, setUsers] = useState<CollaborationUserData[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {

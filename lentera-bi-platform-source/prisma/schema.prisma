@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -48,8 +48,8 @@ model Edge {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  sourceNode       Node     @relation("SourceNodes", fields: [sourceNodeId], references: [id])
-  targetNode       Node     @relation("TargetNodes", fields: [targetNodeId], references: [id])
+  sourceNode       Node     @relation("SourceNodes", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode       Node     @relation("TargetNodes", fields: [targetNodeId], references: [id], onDelete: Cascade)
 
   findings         Finding[]
 }
@@ -71,8 +71,8 @@ model Finding {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  node              Node?    @relation(fields: [nodeId], references: [id])
-  edge              Edge?    @relation(fields: [edgeId], references: [id])
+  node              Node?    @relation(fields: [nodeId], references: [id], onDelete: SetNull)
+  edge              Edge?    @relation(fields: [edgeId], references: [id], onDelete: Cascade)
 }
 
 model CanonicalMetric {
@@ -375,4 +375,27 @@ model MergeRequest {
   updatedAt        DateTime  @updatedAt
 
   sourceBranch     DashboardBranch @relation(fields: [sourceBranchId], references: [id])
+}
+
+// ═══════════════════════════════════════════
+// OBSERVABILITY MODELS
+// ═══════════════════════════════════════════
+
+model ApiLog {
+  id         String   @id @default(cuid())
+  method     String   // GET, POST, PUT, DELETE
+  path       String   // /api/charts, /api/connectors-test, etc.
+  status     Int      // HTTP status code
+  duration   Int      // milliseconds
+  userId     String?  // if authenticated
+  ip         String?
+  userAgent  String?
+  error      String?  // error message if any
+  request    String?  // JSON: request body/params
+  response   String?  // JSON: response summary
+  createdAt  DateTime @default(now())
+
+  @@index([path])
+  @@index([status])
+  @@index([createdAt])
 }

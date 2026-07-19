@@ -1,33 +1,15 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 import { PrismaClient } from '@prisma/client';
-
-// ════════════════════════════════════════════════════════════════
-// USER ACCEPTANCE TEST (UAT) - End-user validation scenarios
-// ════════════════════════════════════════════════════════════════
+import { cleanupTestData, trackIds } from './helpers/cleanup';
 
 const prisma = new PrismaClient();
-
-const cleanup: Array<{ type: string; id: string }> = [];
+const testIds: Record<string, string[]> = {};
+const track = trackIds(testIds);
 
 afterAll(async () => {
-  for (const item of cleanup.reverse()) {
-    try {
-      switch (item.type) {
-        case 'mr': await prisma.mergeRequest.delete({ where: { id: item.id } }); break;
-        case 'branch': await prisma.dashboardBranch.delete({ where: { id: item.id } }); break;
-        case 'chart': await prisma.chartMetric.deleteMany({ where: { chartId: item.id } }).then(() => prisma.chart.delete({ where: { id: item.id } })); break;
-        case 'metric': await prisma.metricSource.deleteMany({ where: { metricId: item.id } }).then(() => prisma.metricDef.delete({ where: { id: item.id } })); break;
-        case 'dataset': await prisma.dataset.delete({ where: { id: item.id } }); break;
-        case 'dashboard': await prisma.dashboard.delete({ where: { id: item.id } }); break;
-        case 'connector': await prisma.dataSourceTable.deleteMany({ where: { connectorId: item.id } }).then(() => prisma.connector.delete({ where: { id: item.id } })); break;
-        case 'collabSession': await prisma.collaborationSession.delete({ where: { id: item.id } }); break;
-      }
-    } catch {}
-  }
+  await cleanupTestData(prisma, testIds);
   await prisma.$disconnect();
 });
-
-function track(type: string, id: string) { cleanup.push({ type, id }); }
 
 // ── UAT 1: Data Analyst Uploads CSV and Views Data ──
 describe('UAT: Data Analyst uploads CSV and views data', () => {

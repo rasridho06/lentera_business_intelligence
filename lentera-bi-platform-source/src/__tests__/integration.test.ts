@@ -1,29 +1,17 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 import { PrismaClient } from '@prisma/client';
+import { cleanupTestData, trackIds } from './helpers/cleanup';
 
 // ════════════════════════════════════════════════════════════════
 // INTEGRATION TESTS - Cross-module interactions via Prisma
 // ════════════════════════════════════════════════════════════════
 
 const prisma = new PrismaClient();
-
-const createdConnectors: string[] = [];
-const createdDashboards: string[] = [];
-const createdCharts: string[] = [];
-const createdDatasets: string[] = [];
-const createdMetrics: string[] = [];
-const createdBranches: string[] = [];
-const createdMRs: string[] = [];
+const testIds: Record<string, string[]> = {};
+const track = trackIds(testIds);
 
 afterAll(async () => {
-  // Cleanup in reverse order of dependencies
-  for (const id of createdMRs) await prisma.mergeRequest.delete({ where: { id } }).catch(() => {});
-  for (const id of createdBranches) await prisma.dashboardBranch.delete({ where: { id } }).catch(() => {});
-  for (const id of createdCharts) await prisma.chartMetric.deleteMany({ where: { chartId: id } }).catch(() => {}).then(() => prisma.chart.delete({ where: { id } }).catch(() => {}));
-  for (const id of createdMetrics) await prisma.metricSource.deleteMany({ where: { metricId: id } }).catch(() => {}).then(() => prisma.metricDef.delete({ where: { id } }).catch(() => {}));
-  for (const id of createdDatasets) await prisma.dataset.delete({ where: { id } }).catch(() => {});
-  for (const id of createdDashboards) await prisma.dashboard.delete({ where: { id } }).catch(() => {});
-  for (const id of createdConnectors) await prisma.dataSourceTable.deleteMany({ where: { connectorId: id } }).catch(() => {}).then(() => prisma.connector.delete({ where: { id } }).catch(() => {}));
+  await cleanupTestData(prisma, testIds);
   await prisma.$disconnect();
 });
 
@@ -62,7 +50,7 @@ describe('Integration: Connector → Table Sync', () => {
       include: { tables: true },
     });
     connectorId = connector.id;
-    createdConnectors.push(connectorId);
+    track('connector', connectorId);
 
     expect(connector.id).toBeDefined();
     expect(connector.type).toBe('clickhouse');
@@ -123,7 +111,7 @@ describe('Integration: Chart ↔ Dashboard Workflow', () => {
       },
     });
     chartId = chart.id;
-    createdCharts.push(chartId);
+    track('chart', chartId);
 
     expect(chart.id).toBeDefined();
     expect(chart.dashboardId).toBeNull();
@@ -134,7 +122,7 @@ describe('Integration: Chart ↔ Dashboard Workflow', () => {
       data: { name: 'Integration Test Dashboard', description: 'Test', branch: 'main' },
     });
     dashboardId = dashboard.id;
-    createdDashboards.push(dashboardId);
+    track('dashboard', dashboardId);
 
     expect(dashboard.id).toBeDefined();
   });
@@ -186,7 +174,7 @@ describe('Integration: Dataset → Chart Data Flow', () => {
       },
     });
     datasetId = dataset.id;
-    createdDatasets.push(datasetId);
+    track('dataset', datasetId);
 
     expect(dataset.type).toBe('virtual');
     expect(dataset.language).toBe('sql');
@@ -204,7 +192,7 @@ describe('Integration: Dataset → Chart Data Flow', () => {
       },
     });
     chartId = chart.id;
-    createdCharts.push(chartId);
+    track('chart', chartId);
 
     expect(chart.datasetId).toBe(datasetId);
   });
@@ -229,7 +217,7 @@ describe('Integration: Metric → Chart Linking', () => {
       },
     });
     metricId = metric.id;
-    createdMetrics.push(metricId);
+    track('metric', metricId);
 
     expect(metric.id).toBeDefined();
     expect(metric.version).toBe(1);
@@ -257,7 +245,7 @@ describe('Integration: Metric → Chart Linking', () => {
       include: { chartMetrics: true },
     });
     chartId = chart.id;
-    createdCharts.push(chartId);
+    track('chart', chartId);
 
     expect(chart.chartMetrics).toHaveLength(1);
     expect(chart.chartMetrics[0].metricId).toBe(metricId);
@@ -275,7 +263,7 @@ describe('Integration: Branch & Merge Request Workflow', () => {
       data: { name: 'Branch Test Dashboard', branch: 'main' },
     });
     dashboardId = dashboard.id;
-    createdDashboards.push(dashboardId);
+    track('dashboard', dashboardId);
   });
 
   it('should create a feature branch', async () => {
@@ -288,7 +276,7 @@ describe('Integration: Branch & Merge Request Workflow', () => {
       },
     });
     branchId = branch.id;
-    createdBranches.push(branchId);
+    track('branch', branchId);
 
     expect(branch.baseBranch).toBe('main');
     expect(branch.status).toBe('active');
@@ -305,7 +293,7 @@ describe('Integration: Branch & Merge Request Workflow', () => {
       },
     });
     mergeRequestId = mr.id;
-    createdMRs.push(mergeRequestId);
+    track('mr', mergeRequestId);
 
     expect(mr.title).toBe('Integration Test MR');
     expect(mr.status).toBe('open');
@@ -320,7 +308,7 @@ describe('Integration: Branch & Merge Request Workflow', () => {
         status: 'active',
       },
     });
-    createdBranches.push(branch2.id);
+    track('branch', branch2.id);
 
     const mr2 = await prisma.mergeRequest.create({
       data: {
@@ -335,7 +323,7 @@ describe('Integration: Branch & Merge Request Workflow', () => {
         }),
       },
     });
-    createdMRs.push(mr2.id);
+    track('mr', mr2.id);
 
     expect(mr2.status).toBe('conflict');
   });
@@ -378,7 +366,7 @@ describe('Integration: File Upload → Connector → Table', () => {
       },
       include: { tables: true },
     });
-    createdConnectors.push(connector.id);
+    track('connector', connector.id);
 
     expect(connector.type).toBe('csv');
     expect(connector.category).toBe('file');
@@ -413,7 +401,7 @@ describe('Integration: File Upload → Connector → Table', () => {
         },
       },
     });
-    createdConnectors.push(connector.id);
+    track('connector', connector.id);
 
     expect(connector.type).toBe('json');
   });
@@ -441,7 +429,7 @@ describe('Integration: File Upload → Connector → Table', () => {
         },
       },
     });
-    createdConnectors.push(connector.id);
+    track('connector', connector.id);
 
     expect(connector.type).toBe('excel');
   });
@@ -468,7 +456,7 @@ describe('Integration: File Upload → Connector → Table', () => {
         },
       },
     });
-    createdConnectors.push(connector.id);
+    track('connector', connector.id);
 
     expect(connector.type).toBe('parquet');
   });
