@@ -24,13 +24,13 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 4.2 - Immutable asset revisions
 
-- [ ] Give every governed asset a stable ID that survives name changes.
-- [ ] Add append-only `AssetRevision` records with asset ID, revision number, actor, action, timestamp, reason, before JSON, after JSON, and content hash.
-- [ ] Add an `AuditEvent` correlation ID so one user action can link its source, semantic, and dashboard changes.
-- [ ] Store revision payloads as metadata only; never copy uploaded file contents or connector passwords.
-- [ ] Add a restore operation that creates a new revision instead of mutating history.
-- [ ] Store Python/SQL job definitions, schedule expression, timezone, enabled state, and last-run pointer as metadata only.
-- [ ] Store append-only job-run metadata: status, start/end time, error summary, output revision ID, and audit correlation ID.
+- [x] Give every governed asset a stable ID that survives name changes.
+- [x] Add append-only `AssetRevision` records with asset ID, revision number, actor, action, timestamp, reason, before JSON, after JSON, and content hash.
+- [x] Add an `AuditEvent` correlation ID so one user action can link its source, semantic, and dashboard changes.
+- [x] Store revision payloads as metadata only; never copy uploaded file contents or connector passwords.
+- [x] Add a restore operation that creates a new revision instead of mutating history.
+- [x] Store Python/SQL job definitions, schedule expression, timezone, enabled state, and last-run pointer as metadata only.
+- [x] Store append-only job-run metadata: status, start/end time, error summary, output revision ID, and audit correlation ID.
 
 ## 4.3 - Semantic metadata foundation
 
@@ -95,3 +95,11 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 - The migration SQL was applied to a disposable SQLite test file and all 132 tests passed against it. The temporary database was removed after validation.
 - Production build passed. No production database URL was used for migration or tests.
 - The Windows Prisma schema-engine executable returned `EPERM` for `migrate deploy`; the generated migration itself was validated with Node's built-in SQLite runtime until the local engine permission issue is resolved.
+## 4.2 implementation record
+
+- Existing CUID asset IDs remain stable across name changes. `AssetRevision` is append-only and uniquely sequenced by asset type, asset ID, and revision number.
+- `AuditEvent` provides a correlation ID for a single user action; revisions and job runs link to that event through foreign keys.
+- `JobDefinition` stores SQL/Python schedule metadata, timezone, enabled state, retry limit, and run pointers. `JobRun` stores immutable execution status, timing, error summary, output revision, and audit linkage.
+- `src/lib/revisions.ts` sanitizes password, secret, token, API-key, credential, and file-content fields before persistence; content hashes are computed from the sanitized after snapshot.
+- Restore reads a historical snapshot and appends a new `restore` revision. It never changes historical revision rows.
+- `npm test` now recreates the ignored SQLite test database from migrations before every run. The focused revision test proves redaction, revision sequence, restore-as-new-revision, and job-run linkage.
