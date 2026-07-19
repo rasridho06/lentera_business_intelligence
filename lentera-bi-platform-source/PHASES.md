@@ -1,12 +1,12 @@
-﻿# Refactoring Phases
+# Refactoring Phases
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 0 | Quick wins: env config, type strictness, Zod dedup | âœ… |
-| 1 | Architecture: delete dual API layer, TanStack Query, NextAuth | âœ… |
-| 2 | Security & validation: encryption, cascade delete, Zod, constants | âœ… |
-| 3 | Test infrastructure: shared cleanup, API integration tests | âœ… |
-| 4 | CI pipeline, ponytail cleanup (dead code, deps, unused components) | âœ… |
+| 0 | Quick wins: env config, type strictness, Zod dedup | Complete |
+| 1 | Architecture: delete dual API layer, TanStack Query, NextAuth | Complete |
+| 2 | Security & validation: encryption, cascade delete, Zod, constants | Complete |
+| 3 | Test infrastructure: shared cleanup, API integration tests | Complete |
+| 4 | CI pipeline, ponytail cleanup (dead code, deps, unused components) | Complete |
 
 
 ## Branch lifecycle rules
