@@ -1,11 +1,17 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import { useTheme } from 'next-themes';
 import { Sun, Moon } from 'lucide-react';
+const subscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 
 export function ThemeToggle({ sidebarOpen }: { sidebarOpen: boolean }) {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const { setTheme, resolvedTheme } = useTheme();
+  const mounted = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const isDark = mounted && resolvedTheme === 'dark';
 
   return (
     <button
