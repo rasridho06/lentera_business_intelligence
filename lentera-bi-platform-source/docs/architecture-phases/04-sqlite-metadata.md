@@ -10,10 +10,10 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 4.0 - Guard rails and backup
 
-- [ ] Record the current Prisma schema and metadata tables.
-- [ ] Back up required local metadata; confirm no production database is targeted.
-- [ ] Ignore the SQLite file, uploads, and credential files.
-- [ ] Define the asset scope: connector, table, dataset, metric, relationship, chart, and dashboard.
+- [x] Record the current Prisma schema and metadata tables.
+- [x] Back up required local metadata; confirm no production database is targeted.
+- [x] Ignore the SQLite file, uploads, and credential files.
+- [x] Define the asset scope: connector, table, dataset, metric, relationship, chart, and dashboard.
 
 ## 4.1 - SQLite migration
 
@@ -78,3 +78,11 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 - High: restore rewrites history. Restore by appending a new revision.
 - Medium: seed is not idempotent. Use stable IDs, upserts, and constraints.
 - Low: README requires PostgreSQL. Update local setup.
+
+## 4.0 implementation record
+
+- Current schema baseline: Prisma `postgresql` provider with `DATABASE_URL`; 20 models are present: `Node`, `Edge`, `Finding`, `CanonicalMetric`, `BuildRun`, `Connector`, `DataSourceTable`, `Dashboard`, `Dataset`, `Chart`, `MetricDef`, `MetricSource`, `ChartMetric`, `Transform`, `User`, `Activity`, `CollaborationSession`, `DashboardBranch`, `MergeRequest`, and `ApiLog`.
+- Local metadata backup check: no `db/` directory or SQLite database exists in the working tree, so there is no local metadata file to copy. No production connection was opened or targeted.
+- Repository guard check: `.gitignore` already excludes `db/`, `upload/`, `*.db`, `*.db-journal`, and `.env` credential files.
+- Phase 4 governed asset scope is fixed to connector, table, dataset, metric, relationship, chart, and dashboard. Existing lineage-only `Node`/`Edge` records remain compatibility data until the later migration subphases.
+- No provider, schema, migration, or runtime code was changed in 4.0; those changes are intentionally deferred to 4.1.
