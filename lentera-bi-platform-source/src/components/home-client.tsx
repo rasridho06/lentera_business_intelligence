@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
-import { allNavItems, navSections, type ViewType } from '@/lib/navigation';
+import React, { useEffect, useState, Suspense } from 'react';
+import { allNavItems, navSections, routeViewIds, type ViewType } from '@/lib/navigation';
 import dynamic from 'next/dynamic';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -48,13 +49,22 @@ function fetcher(url: string) {
   return fetch(url).then(r => { if (!r.ok) throw new Error(`Fetch ${url} failed: ${r.status}`); return r.json(); });
 }
 
-export default function HomeClient() {
-  const [currentView, setCurrentView] = useState<ViewType>('overview');
+interface HomeClientProps { initialView?: ViewType; }
+
+export default function HomeClient({ initialView = 'overview' }: HomeClientProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [currentView, setCurrentView] = useState<ViewType>(initialView);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [nodeDetailId, setNodeDetailId] = useState<string | null>(null);
   const [impactNodeId, setImpactNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchActive, setSearchActive] = useState('');
+
+  useEffect(() => {
+    const route = pathname.split('/').filter(Boolean)[0];
+    setCurrentView(routeViewIds.has(route as ViewType) ? route as ViewType : initialView);
+  }, [initialView, pathname]);
 
   const { data: overviewData } = useQuery({
     queryKey: ['overview'],
@@ -106,6 +116,7 @@ export default function HomeClient() {
   const loading = detailLoading || impactLoading || searchLoading;
 
   const switchView = (view: ViewType) => {
+    router.push(view === 'overview' ? '/overview' : '/' + view);
     setCurrentView(view);
     if (view !== 'detail') setNodeDetailId(null);
     if (view !== 'impact') setImpactNodeId(null);

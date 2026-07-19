@@ -69,3 +69,5 @@ export const navSections = [
 ] satisfies ReadonlyArray<{ label: string; items: NavItem[] }>;
 
 export const allNavItems = navSections.flatMap(section => section.items);
+
+export const routeViewIds = new Set<ViewType>(['overview', 'lineage', 'audit', 'metrics', 'impact', 'connectors', 'dashboards', 'charts', 'datasets', 'metrics-builder', 'transforms', 'collaboration', 'query']);

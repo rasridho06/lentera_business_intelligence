@@ -43,6 +43,19 @@ Navigation metadata now has one caller-independent source. No route or behavior 
 
 The platform shell boundary is reusable without introducing a new state layer. Route pages can adopt it in the next subphase.
 
+## 2.3 - URL-backed feature routes
+
+- [x] Add a single dynamic route at `src/app/(platform)/[view]/page.tsx`.
+- [x] Validate route names against the shared `routeViewIds` set.
+- [x] Pass the validated route into `HomeClient` as `initialView`.
+- [x] Use `usePathname` to synchronize the visible view with the URL.
+- [x] Use `router.push` for navigation menu actions.
+- [x] Keep invalid route handling on the existing not-found path.
+
+### Result
+
+Primary feature views now have direct URLs without duplicating page files. The legacy shell still renders the view content; full layout/page separation remains a later subphase.
+
 ## Tasks
 
 - [ ] Extract the sidebar from `home-client.tsx`.
