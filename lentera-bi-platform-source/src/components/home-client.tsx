@@ -1,22 +1,25 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
+import Link from 'next/link';
+import { allNavItems, navSections, routeViewIds, type ViewType } from '@/lib/navigation';
 import dynamic from 'next/dynamic';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   LayoutDashboard, GitBranch, Shield, LineChart, Search,
   Database, BarChart3, AlertTriangle, ChevronRight, ArrowLeft,
-  Menu, X, Lamp, Code2, Terminal, Users, GitMerge, Cable,
-  Layers, Wrench, FileSpreadsheet, Upload, Sun, Moon,
+  Menu, X, Lamp, Terminal, Users, GitMerge,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { PlatformShell } from '@/components/platform-shell';
 
 const OverviewView = dynamic(() => import('@/components/lentera/overview-view').then(m => ({ default: m.OverviewView })), { ssr: false });
 const LineageView = dynamic(() => import('@/components/lentera/lineage-view').then(m => ({ default: m.LineageView })), { ssr: false });
@@ -34,48 +37,6 @@ const QueryView = dynamic(() => import('@/components/lentera/query-view').then(m
 const ChartsView = dynamic(() => import('@/components/lentera/charts-view').then(m => ({ default: m.ChartsView })), { ssr: false });
 const DatasetsView = dynamic(() => import('@/components/lentera/datasets-view').then(m => ({ default: m.DatasetsView })), { ssr: false });
 
-type ViewType = 'overview' | 'lineage' | 'audit' | 'metrics' | 'impact' | 'detail' | 'search'
-  | 'connectors' | 'dashboards' | 'charts' | 'datasets' | 'metrics-builder' | 'transforms' | 'collaboration' | 'query';
-
-interface NavItem {
-  id: ViewType;
-  label: string;
-  icon: React.ReactNode;
-}
-
-const navSections = [
-  {
-    label: 'BI Platform',
-    items: [
-      { id: 'connectors' as ViewType, label: 'Data Sources', icon: <Cable className="h-4 w-4" /> },
-      { id: 'charts' as ViewType, label: 'Charts', icon: <BarChart3 className="h-4 w-4" /> },
-      { id: 'dashboards' as ViewType, label: 'Dashboards', icon: <LayoutDashboard className="h-4 w-4" /> },
-      { id: 'datasets' as ViewType, label: 'Datasets', icon: <FileSpreadsheet className="h-4 w-4" /> },
-      { id: 'metrics-builder' as ViewType, label: 'Metrics', icon: <Layers className="h-4 w-4" /> },
-      { id: 'transforms' as ViewType, label: 'Transforms', icon: <Wrench className="h-4 w-4" /> },
-      { id: 'query' as ViewType, label: 'SQL Query', icon: <Terminal className="h-4 w-4" /> },
-    ],
-  },
-  {
-    label: 'Lineage & Audit',
-    items: [
-      { id: 'overview' as ViewType, label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
-      { id: 'lineage' as ViewType, label: 'Lineage', icon: <GitBranch className="h-4 w-4" /> },
-      { id: 'audit' as ViewType, label: 'Audit', icon: <Shield className="h-4 w-4" /> },
-      { id: 'metrics' as ViewType, label: 'Metric Drift', icon: <LineChart className="h-4 w-4" /> },
-      { id: 'impact' as ViewType, label: 'Impact', icon: <AlertTriangle className="h-4 w-4" /> },
-    ],
-  },
-  {
-    label: 'Collaboration',
-    items: [
-      { id: 'collaboration' as ViewType, label: 'Team & MRs', icon: <GitMerge className="h-4 w-4" /> },
-    ],
-  },
-];
-
-const allNavItems = navSections.flatMap(s => s.items);
-
 function ComponentLoader() {
   return (
     <div className="flex items-center justify-center py-20">
@@ -89,13 +50,23 @@ function fetcher(url: string) {
   return fetch(url).then(r => { if (!r.ok) throw new Error(`Fetch ${url} failed: ${r.status}`); return r.json(); });
 }
 
-export default function HomeClient() {
-  const [currentView, setCurrentView] = useState<ViewType>('overview');
+interface HomeClientProps { initialView?: ViewType; }
+
+export default function HomeClient({ initialView = 'overview' }: HomeClientProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [transientView, setTransientView] = useState<'detail' | 'impact' | 'search' | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [nodeDetailId, setNodeDetailId] = useState<string | null>(null);
   const [impactNodeId, setImpactNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchActive, setSearchActive] = useState('');
+
+  useEffect(() => setTransientView(null), [pathname]);
+
+  const route = pathname.split('/').filter(Boolean)[0];
+  const currentView: ViewType | 'detail' | 'impact' | 'search' =
+    transientView ?? (routeViewIds.has(route as ViewType) ? route as ViewType : initialView);
 
   const { data: overviewData } = useQuery({
     queryKey: ['overview'],
@@ -146,33 +117,29 @@ export default function HomeClient() {
 
   const loading = detailLoading || impactLoading || searchLoading;
 
-  const switchView = (view: ViewType) => {
-    setCurrentView(view);
-    if (view !== 'detail') setNodeDetailId(null);
-    if (view !== 'impact') setImpactNodeId(null);
-    if (view !== 'search') setSearchActive('');
-  };
-
   const handleNodeSelect = (nodeId: string) => {
     setNodeDetailId(nodeId);
-    setCurrentView('detail');
+    setTransientView('detail');
   };
 
   const handleImpactSearch = (nodeId: string) => {
     setImpactNodeId(nodeId);
-    setCurrentView('impact');
+    setTransientView('impact');
   };
 
   const handleSearch = (query?: string) => {
     const q = query ?? searchQuery;
     if (!q.trim() || q.length < 2) return;
     setSearchActive(q);
-    setCurrentView('search');
+    setTransientView('search');
   };
 
   const navigateBack = () => {
-    if (currentView === 'detail') switchView('lineage');
-    else switchView('overview');
+    router.push(currentView === 'detail' ? '/lineage' : '/overview');
+    setTransientView(null);
+    setNodeDetailId(null);
+    setImpactNodeId(null);
+    setSearchActive('');
   };
 
   const getCurrentSection = () => {
@@ -188,8 +155,8 @@ export default function HomeClient() {
   ];
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen flex bg-background">
+    <PlatformShell>
+      <div>
         <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} border-r bg-card transition-all duration-200 flex flex-col shrink-0`}>
           <div className="p-4 border-b flex items-center gap-2">
             <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-600 text-white shrink-0">
@@ -215,15 +182,15 @@ export default function HomeClient() {
                   {section.items.map(item => (
                     <Tooltip key={item.id}>
                       <TooltipTrigger asChild>
-                        <button
-                          onClick={() => switchView(item.id)}
+                        <Link
+                          href={item.id === 'overview' ? '/overview' : '/' + item.id}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                             currentView === item.id
                               ? 'bg-emerald-50 text-emerald-700 font-medium border border-emerald-200'
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                           }`}
                         >
-                          {item.icon}
+                          <item.icon className="h-4 w-4" />
                           {sidebarOpen && (
                             <>
                               <span>{item.label}</span>
@@ -232,7 +199,7 @@ export default function HomeClient() {
                               )}
                             </>
                           )}
-                        </button>
+                        </Link>
                       </TooltipTrigger>
                       {!sidebarOpen && <TooltipContent side="right">{item.label}</TooltipContent>}
                     </Tooltip>
@@ -438,6 +405,6 @@ export default function HomeClient() {
           </ScrollArea>
         </main>
       </div>
-    </TooltipProvider>
+    </PlatformShell>
   );
 }
