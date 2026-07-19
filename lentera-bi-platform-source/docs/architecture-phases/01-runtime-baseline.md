@@ -1,4 +1,4 @@
-﻿# Day 1 - Phase 1: Runtime and baseline
+# Day 1 - Phase 1: Runtime and baseline
 
 **Planned date:** Monday, 20 July 2026
 **Focus:** Windows production build, measurable baselines, and repeatable local runtime.
