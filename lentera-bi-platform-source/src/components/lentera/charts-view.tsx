@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -822,11 +822,10 @@ export function ChartsView() {
     setLoading(false);
   }, []);
 
-  const [init] = useState(() => {
-    setTimeout(() => { loadData(); }, 0);
-    return true;
-  });
-  void init;
+  useEffect(() => {
+    const timer = setTimeout(loadData, 0);
+    return () => clearTimeout(timer);
+  }, [loadData]);
 
   const handleCreate = async () => {
     await fetch('/api/charts', {

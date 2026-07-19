@@ -54,6 +54,17 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [ ] Review identifiers, secrets, revisions, contracts, relationship validation, traversal, and callers.
 - [ ] Fix Critical/High before merge and Medium in this PR.
 
+## Mandatory browser quality gate
+
+Run this gate after every subphase that can affect runtime or user-visible behavior and again before merge. A successful build or an HTTP status alone is not browser validation.
+
+1. Run `npm run lint`, `npm test`, and `npm run build` in that order.
+2. Start the production runtime, sign in, and open every affected route in a real browser.
+3. Confirm the sidebar and main content render together inside the viewport, then test the primary action, refresh, and Back/Forward navigation.
+4. Fail the gate on an uncaught page error, React console error or warning, unexpected `4xx/5xx` response, missing runtime asset, blank page, or content rendered outside the viewport.
+5. Save screenshots of the relationship, lineage, audit, impact, and repair flows, then record the commands, route, interaction, console result, network result, and screenshot path in the implementation record or PR.
+6. A PR cannot merge until lint, tests, build, and the authenticated browser smoke test pass. Until this flow is automated in CI, execute it manually and attach the evidence.
+
 ## Definition of done
 
 - [ ] CSV, XLSX, or Parquet can reach a versioned physical table, virtual dataset, chart, dashboard, and lineage graph.

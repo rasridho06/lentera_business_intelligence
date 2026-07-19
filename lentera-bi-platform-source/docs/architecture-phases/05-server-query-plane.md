@@ -15,6 +15,17 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [ ] Reject non-read-only SQL for preview and virtual dataset execution.
 - [ ] Keep database credentials and full result sets on the server.
 
+### Browser preview sandbox (sql.js carve-out)
+
+The `/query` route hosts a browser-only SQLite preview sandbox via `sql.js`. The carve-out from the auth-protected query plane is explicit and limited.
+
+- **Asset**: `public/sql-wasm-browser.wasm` (served without authentication via proxy matcher carve-out; exact path only).
+- **Allowed data source**: a single CSV the user explicitly uploads into the sandbox; no credentials, no connectors, no file system reads.
+- **In-memory only**: one `SQL.Database` instance per `/query` tab; dropped when the component unmounts or a new file is uploaded.
+- **Bounds**: reject a CSV whose headers exceed 100 characters, contain control characters, or whose parsed rows exceed 10 000 or 5 MB — return a structured `Parse error` without creating the table.
+- **Forbidden**: connector credentials, upstream queries, sending sandbox rows to the server, exposure in the publish / chart / dataset flows. The sandbox is for ad-hoc preview, not for producing governed BI assets.
+- **Auth gate**: the proxy still protects `/query` itself; only `sql-wasm-browser.wasm` (exact path) is excluded so the engine can bootstrap before the session is established.
+
 ## 5.1 - Source adapters
 
 - [ ] Add a ClickHouse adapter behind the server contract.
@@ -44,6 +55,17 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [ ] Review authentication, SQL construction, secret boundaries, dependency extraction, and revision callers.
 - [ ] Fix Critical/High before merge and Medium in this PR.
 - [ ] After merge, checkout `main`, pull `main`, and create the next phase branch.
+
+## Mandatory browser quality gate
+
+Run this gate after every subphase that can affect runtime or user-visible behavior and again before merge. A successful build or an HTTP status alone is not browser validation.
+
+1. Run `npm run lint`, `npm test`, and `npm run build` in that order.
+2. Start the production runtime, sign in, and open every affected route in a real browser.
+3. Confirm the sidebar and main content render together inside the viewport, then test the primary action, refresh, and Back/Forward navigation.
+4. Fail the gate on an uncaught page error, React console error or warning, unexpected `4xx/5xx` response, missing runtime asset, blank page, or content rendered outside the viewport.
+5. Save screenshots of every affected primary route and `/query`, then record the commands, route, interaction, console result, network result, and screenshot path in the implementation record or PR.
+6. A PR cannot merge until lint, tests, build, and the authenticated browser smoke test pass. Until this flow is automated in CI, execute it manually and attach the evidence.
 
 ## Definition of done
 

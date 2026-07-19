@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -83,11 +83,10 @@ export function ConnectorsView() {
     setLoading(false);
   }, []);
 
-  const [initConnectors] = useState(() => {
-    setTimeout(() => { loadConnectors(); }, 0);
-    return true;
-  });
-  void initConnectors;
+  useEffect(() => {
+    const timer = setTimeout(loadConnectors, 0);
+    return () => clearTimeout(timer);
+  }, [loadConnectors]);
 
   // ── Database Connection Test ──
   const handleTestConnection = async (connectorId?: string) => {

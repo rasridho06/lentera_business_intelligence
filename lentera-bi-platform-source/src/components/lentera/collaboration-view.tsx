@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,12 +35,10 @@ export function CollaborationView() {
     setLoading(false);
   }, []);
 
-  // Load on mount
-  const [initCollab] = useState(() => {
-    setTimeout(() => { loadData(); }, 0);
-    return true;
-  });
-  void initCollab;
+  useEffect(() => {
+    const timer = setTimeout(loadData, 0);
+    return () => clearTimeout(timer);
+  }, [loadData]);
 
   const handleMerge = async (id: string) => {
     await fetch('/api/merge-requests', {

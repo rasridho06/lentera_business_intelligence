@@ -8,7 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, Play, Terminal as TerminalIcon, FileText, XCircle, Loader2 } from 'lucide-react';
 
-// ponytail: in-browser SQLite via sql.js — no server upload endpoint needed
+// ponytail: in-browser SQLite via sql.js — see docs 05-server-query-plane.md 5.0 carve-out contract.
+// Bounds: headers ≤ 100 chars, no control chars; rows ≤ 10_000; file ≤ 5 MB.
+
+const MAX_HEADER_LEN = 100;
+const MAX_ROWS = 10_000;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+function validateHeaders(headers: string[]): string | null {
+  if (headers.length === 0) return 'No columns found in file';
+  for (const h of headers) {
+    if (h.length > MAX_HEADER_LEN) return `Header exceeds ${MAX_HEADER_LEN} characters: "${h.slice(0, 40)}..."`;
+    if (/[\0-\x1f]/.test(h)) return `Header contains control characters: "${h}"`;
+    if (h.trim() === '') return 'Empty header is not allowed';
+  }
+  return null;
+}
 
 export function QueryView() {
   const [db, setDb] = useState<SqlJsDatabase | null>(null);
@@ -21,12 +36,29 @@ export function QueryView() {
   const [rowsLoaded, setRowsLoaded] = useState(0);
   const [executing, setExecuting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // ponytail: keep latest db in a ref so the load-effect cleanup can close it on unmount
+  const dbRef = useRef<SqlJsDatabase | null>(null);
 
   useEffect(() => {
-    initSqlJs().then((SQL) => {
-      setDb(new SQL.Database());
-      setLoading(false);
-    });
+    let cancelled = false;
+    initSqlJs({ locateFile: () => '/sql-wasm-browser.wasm' })
+      .then((SQL) => {
+        if (cancelled) return;
+        const instance = new SQL.Database();
+        dbRef.current = instance;
+        setDb(instance);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(`Failed to load SQL engine: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      const instance = dbRef.current;
+      if (instance) { try { instance.close(); } catch { /* already closed */ } dbRef.current = null; }
+    };
   }, []);
 
   const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,6 +69,11 @@ export function QueryView() {
     setExecuting(true);
 
     try {
+      if (file.size > MAX_FILE_BYTES) {
+        setError(`File exceeds ${MAX_FILE_BYTES / 1024 / 1024} MB preview limit`);
+        setExecuting(false);
+        return;
+      }
       const text = await file.text();
       const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: true });
       if (parsed.errors.length > 0) {
@@ -44,9 +81,14 @@ export function QueryView() {
         setExecuting(false);
         return;
       }
-      const rows = parsed.data as Record<string, unknown>[];
       const headers = parsed.meta.fields || [];
-      if (headers.length === 0) { setError('No columns found in file'); setExecuting(false); return; }
+      const headerError = validateHeaders(headers);
+      if (headerError) { setError(headerError); setExecuting(false); return; }
+
+      const rows = (parsed.data as Record<string, unknown>[]).slice(0, MAX_ROWS);
+      if (rows.length === MAX_ROWS && parsed.data.length > MAX_ROWS) {
+        setError(`Row count truncated to ${MAX_ROWS} for preview`);
+      }
 
       if (!db) return;
       db.run(`DROP TABLE IF EXISTS data`);

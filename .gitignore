@@ -1,0 +1,6 @@
+# Local archive builds and backup snapshots — never tracked
+.backup/
+*.tar.gz
+lentera-bi-platform-lean/
+lentera-bi-platform/my-project
+.DS_Store

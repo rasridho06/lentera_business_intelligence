@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { allNavItems, navSections, routeViewIds, type ViewType } from '@/lib/navigation';
 import dynamic from 'next/dynamic';
@@ -60,8 +60,6 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
   const [impactNodeId, setImpactNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchActive, setSearchActive] = useState('');
-
-  useEffect(() => setTransientView(null), [pathname]);
 
   const route = pathname.split('/').filter(Boolean)[0];
   const currentView: ViewType | 'detail' | 'impact' | 'search' =
@@ -155,7 +153,6 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
 
   return (
     <PlatformShell>
-      <div>
         <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} border-r bg-card transition-all duration-200 flex flex-col shrink-0`}>
           <div className="p-4 border-b flex items-center gap-2">
             <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-600 text-white shrink-0">
@@ -403,7 +400,6 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
             </div>
           </ScrollArea>
         </main>
-      </div>
     </PlatformShell>
   );
 }
