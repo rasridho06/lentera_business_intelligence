@@ -80,6 +80,17 @@ The root route no longer loads the full client application. Authenticated users 
 
 All eight feature routes returned HTTP 307 to `/login` without a session; `/login` returned HTTP 200. Invalid-route status remains an authenticated-session check because the proxy redirects unauthenticated requests before route resolution.
 
+## 2.6 - Remove duplicated route view state
+
+- [x] Derive the primary active view from `usePathname()` and `routeViewIds`.
+- [x] Remove the `currentView` React state and its pathname synchronization effect.
+- [x] Keep only transient detail, impact, and search state because those views do not have primary feature routes yet.
+- [x] Clear transient state when the URL changes or a primary navigation item is selected.
+- [x] Run the full test suite and production build.
+
+### Result
+
+Primary navigation no longer has two competing sources of truth. Refreshing or navigating to a feature route derives the active view directly from the URL; detail, impact, and search remain local transient states until their own routes are introduced.
 ## Tasks
 
 - [ ] Extract the sidebar from `home-client.tsx`.

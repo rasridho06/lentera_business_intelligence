@@ -54,17 +54,18 @@ interface HomeClientProps { initialView?: ViewType; }
 export default function HomeClient({ initialView = 'overview' }: HomeClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [currentView, setCurrentView] = useState<ViewType>(initialView);
+  const [transientView, setTransientView] = useState<'detail' | 'impact' | 'search' | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [nodeDetailId, setNodeDetailId] = useState<string | null>(null);
   const [impactNodeId, setImpactNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchActive, setSearchActive] = useState('');
 
-  useEffect(() => {
-    const route = pathname.split('/').filter(Boolean)[0];
-    setCurrentView(routeViewIds.has(route as ViewType) ? route as ViewType : initialView);
-  }, [initialView, pathname]);
+  useEffect(() => setTransientView(null), [pathname]);
+
+  const route = pathname.split('/').filter(Boolean)[0];
+  const currentView: ViewType | 'detail' | 'impact' | 'search' =
+    transientView ?? (routeViewIds.has(route as ViewType) ? route as ViewType : initialView);
 
   const { data: overviewData } = useQuery({
     queryKey: ['overview'],
@@ -117,7 +118,7 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
 
   const switchView = (view: ViewType) => {
     router.push(view === 'overview' ? '/overview' : '/' + view);
-    setCurrentView(view);
+    setTransientView(null);
     if (view !== 'detail') setNodeDetailId(null);
     if (view !== 'impact') setImpactNodeId(null);
     if (view !== 'search') setSearchActive('');
@@ -125,19 +126,19 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
 
   const handleNodeSelect = (nodeId: string) => {
     setNodeDetailId(nodeId);
-    setCurrentView('detail');
+    setTransientView('detail');
   };
 
   const handleImpactSearch = (nodeId: string) => {
     setImpactNodeId(nodeId);
-    setCurrentView('impact');
+    setTransientView('impact');
   };
 
   const handleSearch = (query?: string) => {
     const q = query ?? searchQuery;
     if (!q.trim() || q.length < 2) return;
     setSearchActive(q);
-    setCurrentView('search');
+    setTransientView('search');
   };
 
   const navigateBack = () => {
