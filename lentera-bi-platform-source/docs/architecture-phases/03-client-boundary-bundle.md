@@ -56,3 +56,18 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - High: removing a client boundary breaks browser APIs. Restore the smallest required boundary.
 - Medium: dead dependency remains. Remove package and lockfile entry.
 - Low: dynamic import has no loading/error state. Add shared fallback and error boundary.
+
+## Implementation record
+
+- Root layout now renders only document metadata, styles, and route children. `Providers` and `Toaster` are scoped to `src/app/(platform)/layout.tsx`, so `/login` does not load the platform client runtime.
+- `HomeClient` keeps route views behind `next/dynamic`; the unused `LineageEnhancedView` import was removed.
+- Import audit after production build: ReactFlow appears only in its lineage chunk, Recharts only in its chart chunk, and no Prisma, database URL, encryption key, or decrypt helper appears in browser chunks.
+- Largest browser chunks after the change: 488,563; 227,539; 137,998; 135,853; and 112,594 bytes.
+- Validation: 132 tests passed and `npm run build` completed successfully.
+
+## Review result
+
+- Critical: none. Server-only modules and secrets remain outside browser chunks.
+- High: none. Heavy libraries are route-scoped through dynamic imports.
+- Medium: none. The unused enhanced lineage import was removed.
+- Low: none blocking. Existing shared loading and error boundaries remain in `HomeClient`.
