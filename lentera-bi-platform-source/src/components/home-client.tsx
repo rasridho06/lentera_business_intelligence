@@ -23,7 +23,6 @@ import { PlatformShell } from '@/components/platform-shell';
 
 const OverviewView = dynamic(() => import('@/components/lentera/overview-view').then(m => ({ default: m.OverviewView })), { ssr: false });
 const LineageView = dynamic(() => import('@/components/lentera/lineage-view').then(m => ({ default: m.LineageView })), { ssr: false });
-const LineageEnhancedView = dynamic(() => import('@/components/lentera/lineage-enhanced-view').then(m => ({ default: m.LineageEnhancedView })), { ssr: false });
 const AuditView = dynamic(() => import('@/components/lentera/audit-view').then(m => ({ default: m.AuditView })), { ssr: false });
 const MetricsView = dynamic(() => import('@/components/lentera/metrics-view').then(m => ({ default: m.MetricsView })), { ssr: false });
 const ImpactView = dynamic(() => import('@/components/lentera/impact-view').then(m => ({ default: m.ImpactView })), { ssr: false });
