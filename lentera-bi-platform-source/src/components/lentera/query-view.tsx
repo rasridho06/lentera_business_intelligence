@@ -23,10 +23,19 @@ export function QueryView() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    initSqlJs().then((SQL) => {
-      setDb(new SQL.Database());
-      setLoading(false);
-    });
+    let cancelled = false;
+    initSqlJs({ locateFile: () => '/sql-wasm-browser.wasm' })
+      .then((SQL) => {
+        if (cancelled) return;
+        setDb(new SQL.Database());
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(`Failed to load SQL engine: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
