@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════
+// LEGACY MODELS (from original Lentera)
+// ═══════════════════════════════════════════
+
+model Node {
+  id             String   @id @default(cuid())
+  projectId      String   @default("hungryhub-analytics")
+  externalId     String
+  platform       String   // dbt, superset, clickhouse, lentera
+  nodeType       String   // source, model, seed, snapshot, test, exposure, dataset, chart, dashboard, metric, column, calculated_column, filter, dimension, canonical_metric, transform, python_transform
+  name           String
+  qualifiedName  String
+  description    String?
+  owner          String?
+  status         String?  // active, disabled, excluded, deprecated, draft
+  metadata       String?  // JSON string for platform-specific fields
+  definitionHash String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sourceEdges    Edge[]   @relation("SourceNodes")
+  targetEdges    Edge[]   @relation("TargetNodes")
+  findings       Finding[]
+
+  @@unique([externalId, nodeType, platform])
+}
+
+model Edge {
+  id               String   @id @default(cuid())
+  sourceNodeId     String
+  targetNodeId     String
+  edgeType         String   // CONTAINS, DERIVED_FROM, USES_COLUMN, AGGREGATES, GROUPED_BY, TIME_DIMENSION, FILTERED_BY, JOINS_WITH, DISPLAYED_IN, BELONGS_TO, PRODUCED_BY, MATCHES, VIOLATES_RULE, IMPLEMENTS_METRIC, TRANSFORMS, READS_FROM, WRITES_TO
+  expression       String?
+  sourcePlatform   String?
+  confidence       String   @default("inferred") // verified, declared, inferred, partial, unknown
+  extractionMethod String?
+  evidence         String?  // JSON string
+  metadata         String?  // JSON string
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  sourceNode       Node     @relation("SourceNodes", fields: [sourceNodeId], references: [id])
+  targetNode       Node     @relation("TargetNodes", fields: [targetNodeId], references: [id])
+
+  findings         Finding[]
+}
+
+model Finding {
+  id                String   @id @default(cuid())
+  ruleId            String   // R1-R8
+  ruleVersion       String   @default("1.0")
+  severity          String   // info, warning, error, critical
+  nodeId            String?
+  edgeId            String?
+  title             String
+  description       String
+  evidence          String?  // JSON string
+  recommendation    String?
+  status            String   @default("open") // open, suppressed, resolved
+  suppressionReason String?
+  suppressionExpiry DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  node              Node?    @relation(fields: [nodeId], references: [id])
+  edge              Edge?    @relation(fields: [edgeId], references: [id])
+}
+
+model CanonicalMetric {
+  id                  String   @id @default(cuid())
+  name                String
+  aliases             String?  // JSON array string
+  description         String?
+  expression          String?
+  aggregation         String?  // sum, count, avg, min, max
+  requiredFilters     String?  // JSON array string
+  excludedFilters     String?  // JSON array string
+  dimensions          String?  // JSON array string
+  currencyRequirement String?
+  timeGrain           String?
+  owner               String?
+  version             String   @default("1.0")
+  severityOnDrift     String   @default("warning")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model BuildRun {
+  id              String   @id @default(cuid())
+  projectId       String   @default("hungryhub-analytics")
+  status          String   @default("success") // success, warning, failed
+  totalModels     Int      @default(0)
+  totalDatasets   Int      @default(0)
+  totalCharts     Int      @default(0)
+  totalDashboards Int      @default(0)
+  unresolvedCount Int      @default(0)
+  lineageCoverage Float    @default(0)
+  errorFindings   Int      @default(0)
+  warningFindings Int      @default(0)
+  criticalFindings Int     @default(0)
+  infoFindings    Int      @default(0)
+  duration        Int?     // seconds
+  createdAt       DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════
+// NEW BI PLATFORM MODELS
+// ═══════════════════════════════════════════
+
+// --- Connector / Data Source ---
+model Connector {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // clickhouse, postgres, mysql, bigquery, snowflake, redshift, sqlite, api, csv, json, excel, parquet
+  category    String   @default("olap") // olap, oltp, file — categorize connector type
+  host        String?
+  port        Int?
+  database    String?
+  username    String?
+  password    String?  // In production, this should be encrypted/vault
+  schema      String?
+  filePath    String?  // For file-based connectors: path to uploaded file
+  fileConfig  String?  // JSON: {sheet, delimiter, encoding, header, inferSchema, columns}
+  config      String?  // JSON string for additional connector-specific config
+  status      String   @default("disconnected") // connected, disconnected, error, syncing
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tables      DataSourceTable[]
+}
+
+model DataSourceTable {
+  id           String    @id @default(cuid())
+  connectorId  String
+  schema       String?
+  name         String
+  type         String    // table, view, materialized_view
+  rowCount     Int?
+  sizeBytes    Int?
+  description  String?
+  columns      String?   // JSON array: [{name, type, nullable, defaultValue, isPK}]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  connector    Connector @relation(fields: [connectorId], references: [id])
+}
+
+// --- Dashboard ---
+model Dashboard {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  layout      String?   // JSON: grid layout config
+  filters     String?   // JSON: dashboard-level filters
+  isPublic    Boolean   @default(false)
+  status      String    @default("draft") // draft, published, archived
+  branch      String    @default("main")
+  ownerUserId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  charts      Chart[]
+  activities  Activity[]
+  branches    DashboardBranch[]
+  datasets    Dataset[]
+}
+
+// --- Dataset (Virtual Dataset) ---
+model Dataset {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  type          String    @default("virtual") // virtual, physical, python_generated
+  language      String    @default("sql") // sql, python
+  code          String?   // SQL query or Python script to generate the dataset
+  sourceTables  String?   // JSON array: [{connectorId, schema, table}] — tables referenced
+  outputColumns String?   // JSON array: [{name, type, description}] — virtual columns
+  connectorId   String?   // Primary connector this dataset queries against
+  schedule      String?   // cron expression or "manual"
+  lastRunAt     DateTime?
+  lastRunStatus String?   // success, failed, running
+  status        String    @default("draft") // draft, published, deprecated
+  branch        String    @default("main")
+  ownerUserId   String?
+  dashboardId   String?   // Optional: dataset can be associated with a dashboard
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  dashboard     Dashboard? @relation(fields: [dashboardId], references: [id])
+}
+
+// --- Chart ---
+model Chart {
+  id            String    @id @default(cuid())
+  dashboardId   String?
+  name          String
+  description   String?
+  chartType     String    // bar, line, pie, area, scatter, table, metric_card, heatmap, funnel, histogram
+  dataSourceId  String?   // Reference to Connector or DataSourceTable
+  dataSourceType String?  // connector, table, dataset, custom_sql, transform
+  datasetId     String?   // Reference to Dataset (virtual dataset)
+  config        String?   // JSON: {xAxis, yAxis, metrics, dimensions, filters, colors, legend, etc.}
+  customSQL     String?   // Custom SQL query
+  layout        String?   // JSON: position in dashboard grid
+  status        String    @default("draft") // draft, published, archived
+  branch        String    @default("main")
+  ownerUserId   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  dashboard     Dashboard? @relation(fields: [dashboardId], references: [id])
+  chartMetrics  ChartMetric[]
+}
+
+// --- Metric (cross-table, can reference multiple columns/tables) ---
+model MetricDef {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  expression    String?   // SQL expression or Python code
+  language      String    @default("sql") // sql, python
+  aggregation   String?   // sum, count, avg, min, max, custom
+  sourceTableId String?   // Primary source table
+  sourceColumn  String?   // Primary source column
+  filters       String?   // JSON: metric-level filters
+  dimensions    String?   // JSON: available dimensions
+  timeGrain     String?   // hour, day, week, month, quarter, year
+  status        String    @default("draft") // draft, published, deprecated
+  branch        String    @default("main")
+  ownerUserId   String?
+  version       Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  chartMetrics  ChartMetric[]
+  metricSources MetricSource[]
+}
+
+// Junction: Metric → source columns from potentially different tables
+model MetricSource {
+  id           String   @id @default(cuid())
+  metricId     String
+  tableId      String?  // DataSourceTable id
+  connectorId  String?  // Connector id
+  schemaName   String?
+  tableName    String
+  columnName   String?
+  role         String   // measure, dimension, filter, join_key, time_dimension
+  expression   String?  // SQL expression for this source
+  createdAt    DateTime @default(now())
+
+  metric       MetricDef @relation(fields: [metricId], references: [id])
+}
+
+// Junction: Chart ↔ Metric
+model ChartMetric {
+  id          String   @id @default(cuid())
+  chartId     String
+  metricId    String
+  alias       String?  // Custom label in chart
+  axis        String?  // left, right
+  color       String?
+  createdAt   DateTime @default(now())
+
+  chart       Chart     @relation(fields: [chartId], references: [id])
+  metric      MetricDef @relation(fields: [metricId], references: [id])
+}
+
+// --- Transform (SQL & Python/ML) ---
+model Transform {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  type           String    // sql, python
+  code           String    // The SQL query or Python script
+  config         String?   // JSON: runtime config, dependencies, output spec
+  inputTables    String?   // JSON array: [{connectorId, schema, table}]
+  outputSpec     String?   // JSON: {type: "table"|"column", schema, table, columns}
+  schedule       String?   // cron expression or "manual"
+  lastRunAt      DateTime?
+  lastRunStatus  String?   // success, failed, running
+  environment    String?   // JSON: Python version, packages
+  status         String    @default("draft") // draft, published, deprecated
+  branch         String    @default("main")
+  ownerUserId    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// --- User & Collaboration ---
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  avatar      String?  // URL or initials color
+  role        String   @default("viewer") // admin, editor, viewer
+  color       String?  // Cursor color for collaboration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activities  Activity[]
+}
+
+model Activity {
+  id           String   @id @default(cuid())
+  userId       String
+  entityType   String   // dashboard, chart, metric, transform, connector
+  entityId     String
+  action       String   // create, edit, view, delete, comment, lock, unlock, branch, merge_request, merge, conflict_resolve
+  details      String?  // JSON
+  dashboardId  String?
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id])
+  dashboard    Dashboard? @relation(fields: [dashboardId], references: [id])
+}
+
+// --- Collaboration Session (for real-time cursors) ---
+model CollaborationSession {
+  id            String   @id @default(cuid())
+  dashboardId   String
+  userId        String
+  cursorX       Int      @default(0)
+  cursorY       Int      @default(0)
+  activeChartId String?  // Currently editing chart
+  status        String   @default("active") // active, idle, disconnected
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@unique([dashboardId, userId])
+}
+
+// --- Git-like Branching & Merge ---
+model DashboardBranch {
+  id            String    @id @default(cuid())
+  dashboardId   String
+  name          String    // main, feature-x, fix-y
+  description   String?
+  baseBranch    String    @default("main")
+  baseCommitAt  DateTime?
+  status        String    @default("active") // active, merged, abandoned
+  ownerUserId   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  dashboard     Dashboard @relation(fields: [dashboardId], references: [id])
+  mergeRequests MergeRequest[]
+
+  @@unique([dashboardId, name])
+}
+
+model MergeRequest {
+  id               String    @id @default(cuid())
+  dashboardId      String
+  sourceBranchId   String
+  targetBranch     String    @default("main")
+  title            String
+  description      String?
+  status           String    @default("open") // open, reviewing, conflict, merged, closed
+  conflictDetails  String?   // JSON: list of conflicting charts/metrics/transforms
+  ownerUserId      String?
+  reviewerUserId   String?
+  mergedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sourceBranch     DashboardBranch @relation(fields: [sourceBranchId], references: [id])
+}

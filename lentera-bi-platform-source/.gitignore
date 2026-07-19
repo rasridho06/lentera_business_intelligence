@@ -1,0 +1,10 @@
+node_modules/
+.next/
+db/
+upload/
+*.db
+*.db-journal
+.env
+*.log
+dist/
+.cache/
