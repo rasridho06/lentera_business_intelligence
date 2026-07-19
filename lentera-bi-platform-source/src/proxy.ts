@@ -15,5 +15,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!login|api/auth|_next/static|_next/image|favicon.ico|sql-wasm-browser.wasm).*)'],
+  // ponytail: sql-wasm-browser.wasm carve-out is anchored to exact path.
+  // Subpaths like /sql-wasm-browser.wasm/foo still go through the auth proxy.
+  matcher: ['/((?!login|api/auth|_next/static|_next/image|favicon.ico|sql-wasm-browser\\.wasm$).*)'],
 };
