@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { createConnectorSchema, validateBody } from '@/lib/validations';
-import { encrypt, decrypt } from '@/lib/crypto';
+import { encrypt } from '@/lib/crypto';
 
 
 
@@ -18,11 +18,7 @@ export async function GET() {
       include: { tables: true },
       orderBy: { createdAt: 'desc' },
     });
-    const decrypted = connectors.map((c) => ({
-      ...c,
-      password: c.password ? decrypt(c.password) : null,
-    }));
-    return NextResponse.json(decrypted);
+    return NextResponse.json(connectors.map(({ password: _, ...connector }) => connector));
   } catch (error) {
     console.error('Connectors GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch connectors' }, { status: 500 });
@@ -64,10 +60,9 @@ export async function POST(request: NextRequest) {
       where: { id: connector.id },
       include: { tables: true },
     });
-    return NextResponse.json(result ? {
-      ...result,
-      password: result.password ? decrypt(result.password) : null,
-    } : null);
+    if (!result) return NextResponse.json(null);
+    const { password: _, ...responseConnector } = result;
+    return NextResponse.json(responseConnector);
   } catch (error) {
     console.error('Connector POST error:', error);
     return NextResponse.json({ error: 'Failed to create connector' }, { status: 500 });

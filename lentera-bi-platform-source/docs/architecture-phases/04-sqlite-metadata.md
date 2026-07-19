@@ -1,52 +1,69 @@
 > Part 4 of [Lean Architecture 7-Day Plan](../../LEAN_ARCHITECTURE_7_DAY_PLAN.md).
 
-# Day 4 - Phase 4: Local SQLite metadata
+# Day 4 - Phase 4: Local metadata, revisions, and audit
 
-Focus: local development needs Node.js and one SQLite file, not PostgreSQL.
+Focus: local development needs Node.js and one SQLite file; every governed BI asset also needs a durable revision and audit trail.
 
 ## Branch rule
+
 One large phase equals one dedicated branch. After merge, checkout `main`, pull `main`, then create the next phase branch.
 
 ## 4.0 - Guard rails and backup
-- [ ] Record current schema and metadata tables.
-- [ ] Back up required metadata.
-- [ ] Confirm no production database is targeted.
-- [ ] Ignore the SQLite file and local uploads.
 
-## 4.1 - Datasource and migration
-- [ ] Change Prisma provider to SQLite.
-- [ ] Use `prisma/lentera.db`.
-- [ ] Add credential-free `.env.example`.
-- [ ] Create a migration from an empty database.
-- [ ] Run Prisma generate.
+- [ ] Record the current Prisma schema and metadata tables.
+- [ ] Back up required local metadata; confirm no production database is targeted.
+- [ ] Ignore the SQLite file, uploads, and credential files.
+- [ ] Define the asset scope: connector, table, dataset, metric, relationship, chart, and dashboard.
 
-## 4.2 - Relations and seed
-- [ ] Review foreign keys and cascade behavior.
-- [ ] Make seed deterministic and idempotent.
-- [ ] Use stable IDs, upserts, and unique constraints.
-- [ ] Separate test and development databases.
+## 4.1 - SQLite migration
 
-## 4.3 - Rebuild and verify
-- [ ] Create an empty SQLite database and apply migrations.
-- [ ] Run seed twice and verify no duplicates.
-- [ ] Verify users, connectors, datasets, charts, dashboards, nodes, and edges.
+- [ ] Change the Prisma provider to SQLite and use `prisma/lentera.db`.
+- [ ] Add a credential-free `.env.example`.
+- [ ] Create a migration from an empty database and run Prisma generate.
+- [ ] Separate test and development database paths.
+
+## 4.2 - Immutable asset revisions
+
+- [ ] Give every governed asset a stable ID that survives name changes.
+- [ ] Add append-only `AssetRevision` records with asset ID, revision number, actor, action, timestamp, reason, before JSON, after JSON, and content hash.
+- [ ] Add an `AuditEvent` correlation ID so one user action can link its source, semantic, and dashboard changes.
+- [ ] Store revision payloads as metadata only; never copy uploaded file contents or connector passwords.
+- [ ] Add a restore operation that creates a new revision instead of mutating history.
+
+## 4.3 - Semantic metadata foundation
+
+- [ ] Persist dataset schema snapshots and schema hashes.
+- [ ] Persist metric definitions, ownership, certification state, and freshness/SLA metadata.
+- [ ] Add relationship definition storage: source/target table and column, cardinality, filter direction, active state, and validation status.
+- [ ] Use stable IDs, unique constraints, foreign keys, and explicit cascade rules.
+
+## 4.4 - Seed and verification
+
+- [ ] Make the seed deterministic and idempotent.
+- [ ] Run the seed twice and prove no duplicates or revision rewrites.
+- [ ] Rebuild an empty SQLite database and verify users, connectors, tables, datasets, metrics, relationships, charts, dashboards, nodes, edges, revisions, and audit events.
 - [ ] Open metadata-backed routes without PostgreSQL.
 
-## 4.4 - Handoff and review
+## 4.5 - Handoff and review
+
 - [ ] Run empty migration, repeated seed, tests, and build.
-- [ ] Review schema, migration, environment, and callers.
+- [ ] Review migration safety, audit immutability, revision callers, environment files, and secret exposure.
 - [ ] Fix Critical/High before merge and Medium in this PR.
 - [ ] After merge, checkout `main`, pull `main`, and create the next phase branch.
 
 ## Definition of done
+
 - [ ] App runs with Node.js and one SQLite file.
 - [ ] Seed is repeatable without duplicates.
 - [ ] Tests do not mutate the development database.
-- [ ] Metadata routes work without PostgreSQL.
+- [ ] Every governed asset has immutable revision and audit records.
+- [ ] Restore creates a new revision and preserves history.
 
 ## Review focus
+
 - Critical: migration can destroy data or target production. Use fresh local databases and destructive-command guards.
-- High: credentials or SQLite files are staged. Fix ignore rules and validate staged files.
-- High: relation/cascade rules create orphans. Add parent-delete tests.
+- Critical: revisions contain file data or connector secrets. Store metadata and redacted snapshots only.
+- High: an asset can be overwritten without actor, time, or before/after state. Write an append-only revision in the same transaction.
+- High: restore rewrites history. Restore by appending a new revision.
 - Medium: seed is not idempotent. Use stable IDs, upserts, and constraints.
 - Low: README requires PostgreSQL. Update local setup.
