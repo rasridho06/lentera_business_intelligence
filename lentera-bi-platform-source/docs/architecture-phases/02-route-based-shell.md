@@ -1,4 +1,4 @@
-﻿> Part 2 of [Lean Architecture 7-Day Plan](../../LEAN_ARCHITECTURE_7_DAY_PLAN.md).
+> Part 2 of [Lean Architecture 7-Day Plan](../../LEAN_ARCHITECTURE_7_DAY_PLAN.md).
 
 # Day 2 - Phase 2: Route-based application shell
 
@@ -8,6 +8,19 @@
 ## Branch rule
 
 Work for this phase belongs only to `codex/phase-2-route-shell`. If this phase is merged, checkout `main`, pull `main`, and create a new dedicated branch before starting Phase 3.
+
+## 2.0 - Guard rails and route baseline
+
+- [x] Confirm branch: codex/phase-2-route-shell.
+- [x] Confirm base: main at merge commit 2e72061.
+- [x] Preserve unrelated archives and .backup/ changes outside staging.
+- [x] Record current root flow: src/app/page.tsx is a client wrapper with ssr: false.
+- [x] Record current navigation: home-client.tsx owns currentView, switchView, conditional rendering, and all menu buttons.
+- [x] Record auth boundary: src/proxy.ts protects non-login, non-API routes.
+
+### Baseline result
+
+The application has no feature URL routes yet. The root route loads the full client shell, and navigation is state-driven. Phase 2 will make the URL the single source of truth without changing API contracts or business logic.
 
 ## Tasks
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
+import { allNavItems, navSections, type ViewType } from '@/lib/navigation';
 import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   LayoutDashboard, GitBranch, Shield, LineChart, Search,
   Database, BarChart3, AlertTriangle, ChevronRight, ArrowLeft,
-  Menu, X, Lamp, Code2, Terminal, Users, GitMerge, Cable,
-  Layers, Wrench, FileSpreadsheet, Upload, Sun, Moon,
+  Menu, X, Lamp, Terminal, Users, GitMerge,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -33,48 +33,6 @@ const CollaborationView = dynamic(() => import('@/components/lentera/collaborati
 const QueryView = dynamic(() => import('@/components/lentera/query-view').then(m => ({ default: m.QueryView })), { ssr: false });
 const ChartsView = dynamic(() => import('@/components/lentera/charts-view').then(m => ({ default: m.ChartsView })), { ssr: false });
 const DatasetsView = dynamic(() => import('@/components/lentera/datasets-view').then(m => ({ default: m.DatasetsView })), { ssr: false });
-
-type ViewType = 'overview' | 'lineage' | 'audit' | 'metrics' | 'impact' | 'detail' | 'search'
-  | 'connectors' | 'dashboards' | 'charts' | 'datasets' | 'metrics-builder' | 'transforms' | 'collaboration' | 'query';
-
-interface NavItem {
-  id: ViewType;
-  label: string;
-  icon: React.ReactNode;
-}
-
-const navSections = [
-  {
-    label: 'BI Platform',
-    items: [
-      { id: 'connectors' as ViewType, label: 'Data Sources', icon: <Cable className="h-4 w-4" /> },
-      { id: 'charts' as ViewType, label: 'Charts', icon: <BarChart3 className="h-4 w-4" /> },
-      { id: 'dashboards' as ViewType, label: 'Dashboards', icon: <LayoutDashboard className="h-4 w-4" /> },
-      { id: 'datasets' as ViewType, label: 'Datasets', icon: <FileSpreadsheet className="h-4 w-4" /> },
-      { id: 'metrics-builder' as ViewType, label: 'Metrics', icon: <Layers className="h-4 w-4" /> },
-      { id: 'transforms' as ViewType, label: 'Transforms', icon: <Wrench className="h-4 w-4" /> },
-      { id: 'query' as ViewType, label: 'SQL Query', icon: <Terminal className="h-4 w-4" /> },
-    ],
-  },
-  {
-    label: 'Lineage & Audit',
-    items: [
-      { id: 'overview' as ViewType, label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
-      { id: 'lineage' as ViewType, label: 'Lineage', icon: <GitBranch className="h-4 w-4" /> },
-      { id: 'audit' as ViewType, label: 'Audit', icon: <Shield className="h-4 w-4" /> },
-      { id: 'metrics' as ViewType, label: 'Metric Drift', icon: <LineChart className="h-4 w-4" /> },
-      { id: 'impact' as ViewType, label: 'Impact', icon: <AlertTriangle className="h-4 w-4" /> },
-    ],
-  },
-  {
-    label: 'Collaboration',
-    items: [
-      { id: 'collaboration' as ViewType, label: 'Team & MRs', icon: <GitMerge className="h-4 w-4" /> },
-    ],
-  },
-];
-
-const allNavItems = navSections.flatMap(s => s.items);
 
 function ComponentLoader() {
   return (
@@ -223,7 +181,7 @@ export default function HomeClient() {
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                           }`}
                         >
-                          {item.icon}
+                          <item.icon className="h-4 w-4" />
                           {sidebarOpen && (
                             <>
                               <span>{item.label}</span>
