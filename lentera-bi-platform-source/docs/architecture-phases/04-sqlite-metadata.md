@@ -17,10 +17,10 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 4.1 - SQLite migration
 
-- [ ] Change the Prisma provider to SQLite and use `prisma/lentera.db`.
-- [ ] Add a credential-free `.env.example`.
-- [ ] Create a migration from an empty database and run Prisma generate.
-- [ ] Separate test and development database paths.
+- [x] Change the Prisma provider to SQLite and use `prisma/lentera.db`.
+- [x] Add a credential-free `.env.example`.
+- [x] Create a migration from an empty database and run Prisma generate.
+- [x] Separate test and development database paths.
 
 ## 4.2 - Immutable asset revisions
 
@@ -29,6 +29,8 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [ ] Add an `AuditEvent` correlation ID so one user action can link its source, semantic, and dashboard changes.
 - [ ] Store revision payloads as metadata only; never copy uploaded file contents or connector passwords.
 - [ ] Add a restore operation that creates a new revision instead of mutating history.
+- [ ] Store Python/SQL job definitions, schedule expression, timezone, enabled state, and last-run pointer as metadata only.
+- [ ] Store append-only job-run metadata: status, start/end time, error summary, output revision ID, and audit correlation ID.
 
 ## 4.3 - Semantic metadata foundation
 
@@ -86,3 +88,10 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 - Repository guard check: `.gitignore` already excludes `db/`, `upload/`, `*.db`, `*.db-journal`, and `.env` credential files.
 - Phase 4 governed asset scope is fixed to connector, table, dataset, metric, relationship, chart, and dashboard. Existing lineage-only `Node`/`Edge` records remain compatibility data until the later migration subphases.
 - No provider, schema, migration, or runtime code was changed in 4.0; those changes are intentionally deferred to 4.1.
+## 4.1 implementation record
+
+- Prisma now uses the SQLite provider. Development uses `file:./lentera.db` (resolved under `prisma/`); Vitest forces the separate `file:./test.db` path.
+- Replaced the PostgreSQL initial migration with `prisma/migrations/20260719100000_init_sqlite/migration.sql`, generated from an empty schema. Prisma Client generation completed successfully.
+- The migration SQL was applied to a disposable SQLite test file and all 132 tests passed against it. The temporary database was removed after validation.
+- Production build passed. No production database URL was used for migration or tests.
+- The Windows Prisma schema-engine executable returned `EPERM` for `migrate deploy`; the generated migration itself was validated with Node's built-in SQLite runtime until the local engine permission issue is resolved.

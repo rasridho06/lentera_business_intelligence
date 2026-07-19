@@ -25,7 +25,8 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 7.2 - Contracts, lineage, and impact
 
-- [ ] Create lineage from source file/connector through table, virtual dataset, metric, chart, and dashboard.
+- [ ] Create lineage from source file/connector through table, SQL/Python virtual dataset, metric, chart, and dashboard.
+- [ ] Link scheduler job definitions and job runs to the Python/SQL output revision that they produced.
 - [ ] Run contract checks when a source schema, SQL definition, metric, or relationship changes.
 - [ ] Identify downstream breakage: missing column, incompatible type, metric failure, dashboard query failure, or changed join cardinality.
 - [ ] Traverse downstream impact with visited set, depth limit, and result-node limit.
@@ -33,7 +34,7 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 7.3 - Change intelligence and repair suggestions
 
-- [ ] Display an append-only timeline with actor, time, reason, revision, before/after diff, validation outcome, and impacted assets.
+- [ ] Display an append-only timeline with actor, time, reason, revision, before/after diff, validation outcome, job-run status, and impacted assets.
 - [ ] Support draft, review, publish, reject, restore, and rollback-as-new-revision states.
 - [ ] Before publish, simulate impacted virtual datasets, metrics, charts, and dashboards against the proposed revision.
 - [ ] For a missing or renamed column, suggest replacement candidates using compatible type, normalized name, source lineage, and schema profile.

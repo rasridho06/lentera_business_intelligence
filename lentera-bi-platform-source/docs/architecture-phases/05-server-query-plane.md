@@ -11,9 +11,9 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 ## 5.0 - Query boundary
 
 - [ ] Inventory every browser-side SQL or database call.
-- [ ] Define a single authenticated server query contract with timeout, row limit, byte limit, and structured error response.
+- [ ] Define a single authenticated server execution contract for SQL and Python with timeout, memory/row/byte limits, and structured error responses.
 - [ ] Reject non-read-only SQL for preview and virtual dataset execution.
-- [ ] Keep database credentials and full result sets on the server.
+- [ ] Keep database credentials, Python runtime access, and full result sets on the server.
 
 ### Browser preview sandbox (sql.js carve-out)
 
@@ -35,8 +35,9 @@ The `/query` route hosts a browser-only SQLite preview sandbox via `sql.js`. The
 
 ## 5.2 - Virtual SQL datasets
 
-- [ ] Persist virtual dataset SQL, source asset IDs, output schema snapshot, owner, and revision ID.
+- [ ] Persist virtual dataset SQL or Python code, language, source asset IDs, output schema snapshot, owner, and revision ID.
 - [ ] Validate SQL before save and resolve direct dependencies.
+- [ ] Run Python only in a server-side sandbox with an allowlisted runtime and packages; never execute arbitrary request code in the Next.js process.
 - [ ] Reject circular virtual dataset references.
 - [ ] Revalidate a virtual dataset when an upstream schema or relationship changes.
 - [ ] Label dependency precision as column-level only when parsing is confident; otherwise retain a table-level edge.
@@ -45,7 +46,7 @@ The `/query` route hosts a browser-only SQLite preview sandbox via `sql.js`. The
 
 - [ ] Add contracts for column existence, type, nullability, uniqueness, freshness, and accepted values.
 - [ ] Run a bounded preview and contract check before publish.
-- [ ] Return machine-readable failures: missing column, incompatible type, stale source, or join ambiguity.
+- [ ] Return machine-readable failures: missing column, incompatible type, stale source, join ambiguity, timeout, memory limit, or Python runtime error.
 - [ ] Persist validation outcome as an audit-linked revision event.
 
 ## 5.4 - Handoff and review
@@ -70,7 +71,7 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 ## Definition of done
 
 - [ ] Browser never receives database credentials or unbounded result sets.
-- [ ] Virtual datasets are SQL-backed, versioned, and dependency-aware.
+- [ ] Virtual datasets are SQL- or Python-backed, versioned, and dependency-aware.
 - [ ] Bad SQL and contract violations return actionable structured errors.
 - [ ] Upstream changes trigger virtual dataset revalidation.
 
