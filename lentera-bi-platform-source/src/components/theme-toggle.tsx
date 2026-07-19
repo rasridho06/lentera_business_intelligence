@@ -7,7 +7,6 @@ const subscribe = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
-
 export function ThemeToggle({ sidebarOpen }: { sidebarOpen: boolean }) {
   const { setTheme, resolvedTheme } = useTheme();
   const mounted = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);

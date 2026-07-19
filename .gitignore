@@ -2,6 +2,5 @@
 .backup/
 *.tar.gz
 lentera-bi-platform-lean/
-lentera-bi-platform-source.tar.gz
 lentera-bi-platform/my-project
 .DS_Store
