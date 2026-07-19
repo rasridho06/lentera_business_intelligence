@@ -45,6 +45,11 @@ model Edge {
   extractionMethod String?
   evidence         String?  // JSON string
   metadata         String?  // JSON string
+  // Phase 7.0a lineage linkage — populated when an AssetRevision creates/updates this edge.
+  // Nullable because legacy lineage-only edges (dbt/Superset imports) are not yet linked.
+  assetType        String?
+  assetId          String?
+  sourceRevisionId String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -52,6 +57,8 @@ model Edge {
   targetNode       Node     @relation("TargetNodes", fields: [targetNodeId], references: [id], onDelete: Cascade)
 
   findings         Finding[]
+
+  @@index([assetType, assetId])
 }
 
 model Finding {
@@ -416,22 +423,27 @@ model AssetRevision {
 }
 
 model JobDefinition {
-  id          String   @id @default(cuid())
-  assetType   String
-  assetId     String
-  schedule    String
-  timezone    String   @default("UTC")
-  enabled     Boolean  @default(false)
-  retryLimit  Int      @default(0)
-  lastRunAt   DateTime?
-  nextRunAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  assetType           String
+  assetId             String
+  schedule            String
+  timezone            String   @default("UTC")
+  enabled             Boolean  @default(false)
+  retryLimit          Int      @default(0)
+  // Phase 6.4 scheduler needs: lockKey + lockedAt (per-job lock), consecutiveFailures (circuit breaker), missedRunPolicy (skip | catch_up | fail).
+  lockKey             String?
+  lockedAt            DateTime?
+  consecutiveFailures Int      @default(0)
+  missedRunPolicy     String?  // skip, catch_up, fail
+  lastRunAt           DateTime?
+  nextRunAt           DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  runs        JobRun[]
+  runs                JobRun[]
 
   @@unique([assetType, assetId])
-  @@index([enabled, nextRunAt])
+  @@index([enabled, nextRunAt, lockKey])
 }
 
 model JobRun {
