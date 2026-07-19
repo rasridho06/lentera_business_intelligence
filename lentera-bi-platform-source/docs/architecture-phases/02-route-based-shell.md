@@ -68,6 +68,18 @@ Primary feature views now have direct URLs without duplicating page files. The l
 
 The root route no longer loads the full client application. Authenticated users enter through `/overview`, while login remains an independent route.
 
+## 2.5 - Direct-route smoke test
+
+- [x] Start standalone production runtime on port 3001.
+- [x] Check `/overview`, `/connectors`, `/datasets`, `/query`, `/charts`, `/dashboards`, `/metrics`, and `/lineage`.
+- [x] Confirm each protected route returns the auth redirect when unauthenticated.
+- [x] Confirm `/login` returns `200 OK`.
+- [x] Stop the production process cleanly.
+
+### Result
+
+All eight feature routes returned HTTP 307 to `/login` without a session; `/login` returned HTTP 200. Invalid-route status remains an authenticated-session check because the proxy redirects unauthenticated requests before route resolution.
+
 ## Tasks
 
 - [ ] Extract the sidebar from `home-client.tsx`.
