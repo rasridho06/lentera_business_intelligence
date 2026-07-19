@@ -1,4 +1,4 @@
-﻿# Lentera Lean Architecture: 7-Day Execution Plan
+# Lentera Lean Architecture: 7-Day Execution Plan
 
 **Period:** 20-26 July 2026
 **Rule:** one day, one phase, one measurable result.
@@ -6,24 +6,43 @@
 ## Target outcome
 
 ```text
-login -> source/file -> dataset -> query -> chart -> dashboard -> table lineage
+CSV/XLSX/Parquet -> physical table -> virtual SQL dataset -> semantic model -> chart -> dashboard
+                                  |                                      |
+                                  +-> revision/audit -> contracts -> relationship manager -> lineage -> impact
 ```
+
+Lentera is not only a BI builder. It is a change-safe BI workspace: every semantic change is attributable, validated, impact-scored, and recoverable before it silently breaks a dashboard.
 
 ## Phases
 
 1. [Day 1 - Runtime and baseline](docs/architecture-phases/01-runtime-baseline.md)
 2. [Day 2 - Route-based application shell](docs/architecture-phases/02-route-based-shell.md)
-3. [Day 3 - Client boundary and bundle](docs/architecture-phases/03-client-boundary-bundle.md)
-4. [Day 4 - Local SQLite metadata](docs/architecture-phases/04-sqlite-metadata.md)
-5. [Day 5 - Server query plane](docs/architecture-phases/05-server-query-plane.md)
-6. [Day 6 - DuckDB and BI core flow](docs/architecture-phases/06-duckdb-bi-core-flow.md)
-7. [Day 7 - Lineage and final hardening](docs/architecture-phases/07-lineage-final-hardening.md)
+3. [Day 3 - Client boundaries and bundle](docs/architecture-phases/03-client-boundary-bundle.md)
+4. [Day 4 - Local metadata, revisions, and audit](docs/architecture-phases/04-sqlite-metadata.md)
+5. [Day 5 - Secure query plane and virtual datasets](docs/architecture-phases/05-server-query-plane.md)
+6. [Day 6 - Universal ingestion and BI authoring](docs/architecture-phases/06-duckdb-bi-core-flow.md)
+7. [Day 7 - Change-safe semantic governance](docs/architecture-phases/07-lineage-final-hardening.md)
 
 ## Scope boundaries
 
 - One Next.js application; no new microservices.
-- SQLite for local metadata, DuckDB for analytics files, and ClickHouse as the first connector.
-- Table-level lineage only; column-level lineage, Redis, workers, OpenLineage receiver, collaboration, and extra connectors are deferred.
+- SQLite stores local metadata, revisions, audit events, semantic definitions, and relationship definitions.
+- DuckDB analyzes uploaded CSV, XLSX, and Parquet files on the server; ClickHouse is the first external connector.
+- Full files and connector secrets never enter browser memory or API responses.
+- Git-like history means immutable asset revisions, diffs, approval state, and restore inside Lentera. It does not mean embedding a Git server.
+- Column-level dependency capture is limited to SQL expressions that can be parsed confidently. Unknown expressions remain table-level and are labeled as such.
+- Redis, workers, OpenLineage receiver, collaboration automation, extra connectors, and natural-language query generation are deferred.
+
+## Product differentiator
+
+Commodity BI features are import, SQL, charts, dashboards, and static lineage. Lentera differentiates with a **change intelligence loop**:
+
+1. A user proposes a source, schema, virtual dataset, metric, or relationship change.
+2. Lentera stores a revision with actor, time, before/after payload, and reason.
+3. It validates semantic contracts and calculates downstream impact.
+4. It blocks or warns on broken metrics, ambiguous joins, row multiplication, missing columns, and incompatible types.
+5. It explains the failure and suggests a verified replacement candidate when confidence is sufficient.
+6. A reviewer publishes, rejects, or restores the revision.
 
 ## Branch lifecycle rules
 
