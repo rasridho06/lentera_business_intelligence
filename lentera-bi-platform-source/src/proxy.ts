@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function proxy(req: NextRequest) {
   const token = await getToken({ req });
   if (!token) {
-    if (req.nextUrl.pathname.startsWith('/api/')) {
+    if (req.nextUrl.pathname === '/api' || req.nextUrl.pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const url = new URL('/login', req.url);

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { decrypt } from '@/lib/crypto';
 
 // ── Connector Connection Test API ──
 // Tests connection to a database connector (simulated with validation)
@@ -273,20 +274,36 @@ function getVersionInfo(type: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    let params: ConnectionTestParams & { connectorId?: string } = body;
+
+    if (params.connectorId) {
+      const connector = await db.connector.findUnique({ where: { id: params.connectorId } });
+      if (!connector) return NextResponse.json({ success: false, error: 'Connector not found' }, { status: 404 });
+      params = {
+        ...params,
+        type: connector.type,
+        host: connector.host || '',
+        port: connector.port || 0,
+        username: connector.username || '',
+        password: connector.password ? decrypt(connector.password) : '',
+        database: connector.database || '',
+        schema: connector.schema || undefined,
+      };
+    }
 
     // Validate params
-    const validation = validateConnectionParams(body);
+    const validation = validateConnectionParams(params);
     if (!validation.valid) {
       return NextResponse.json({ success: false, error: validation.error }, { status: 400 });
     }
 
     // Simulate connection test
-    const result = simulateConnection(body);
+    const result = simulateConnection(params);
 
     if (result.success) {
       // If connector ID provided, also sync tables to the database
-      if (body.connectorId) {
-        const connectorId = body.connectorId;
+      if (params.connectorId) {
+        const connectorId = params.connectorId;
 
         // Update connector status
         await db.connector.update({
