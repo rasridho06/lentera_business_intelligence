@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
+import Link from 'next/link';
 import { allNavItems, navSections, routeViewIds, type ViewType } from '@/lib/navigation';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
@@ -116,14 +117,6 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
 
   const loading = detailLoading || impactLoading || searchLoading;
 
-  const switchView = (view: ViewType) => {
-    router.push(view === 'overview' ? '/overview' : '/' + view);
-    setTransientView(null);
-    if (view !== 'detail') setNodeDetailId(null);
-    if (view !== 'impact') setImpactNodeId(null);
-    if (view !== 'search') setSearchActive('');
-  };
-
   const handleNodeSelect = (nodeId: string) => {
     setNodeDetailId(nodeId);
     setTransientView('detail');
@@ -142,8 +135,11 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
   };
 
   const navigateBack = () => {
-    if (currentView === 'detail') switchView('lineage');
-    else switchView('overview');
+    router.push(currentView === 'detail' ? '/lineage' : '/overview');
+    setTransientView(null);
+    setNodeDetailId(null);
+    setImpactNodeId(null);
+    setSearchActive('');
   };
 
   const getCurrentSection = () => {
@@ -186,8 +182,8 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
                   {section.items.map(item => (
                     <Tooltip key={item.id}>
                       <TooltipTrigger asChild>
-                        <button
-                          onClick={() => switchView(item.id)}
+                        <Link
+                          href={item.id === 'overview' ? '/overview' : '/' + item.id}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                             currentView === item.id
                               ? 'bg-emerald-50 text-emerald-700 font-medium border border-emerald-200'
@@ -203,7 +199,7 @@ export default function HomeClient({ initialView = 'overview' }: HomeClientProps
                               )}
                             </>
                           )}
-                        </button>
+                        </Link>
                       </TooltipTrigger>
                       {!sidebarOpen && <TooltipContent side="right">{item.label}</TooltipContent>}
                     </Tooltip>

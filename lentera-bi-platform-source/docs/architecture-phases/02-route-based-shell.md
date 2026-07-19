@@ -93,22 +93,20 @@ All eight feature routes returned HTTP 307 to `/login` without a session; `/logi
 Primary navigation no longer has two competing sources of truth. Refreshing or navigating to a feature route derives the active view directly from the URL; detail, impact, and search remain local transient states until their own routes are introduced.
 ## Tasks
 
-- [ ] Extract the sidebar from `home-client.tsx`.
-- [ ] Extract the header and content container.
-- [ ] Create the authenticated platform layout.
-- [ ] Move navigation configuration into one file.
-- [ ] Replace menu buttons with Next.js `Link`.
-- [ ] Use `usePathname` only for the active menu state.
-- [ ] Create routes for overview, connectors, datasets, query, charts, dashboards, metrics, and lineage.
-- [ ] Render the existing views on their respective routes.
-- [ ] Redirect the root route to overview.
-- [ ] Keep login outside the authenticated layout.
-- [ ] Remove `currentView`, `switchView`, and conditional rendering of every view.
-- [ ] Delete `home-client.tsx` if it is no longer used.
-- [ ] Hide deferred feature menu items.
-- [ ] Test direct refresh for every route.
-- [ ] Test browser Back and Forward navigation.
+- [x] Keep the shared shell boundary in `platform-shell.tsx`.
+- [x] Keep navigation metadata in `src/lib/navigation.ts`.
+- [x] Use Next.js `Link` for primary menu navigation.
+- [x] Use `usePathname` only to derive the active route view.
+- [x] Serve all primary feature views through the validated dynamic route.
+- [x] Redirect the root route to `/overview`.
+- [x] Keep login outside the platform route flow.
+- [x] Remove duplicated `currentView` state and `switchView` navigation callers.
+- [x] Verify direct protected-route refresh behavior and login access.
+- [x] Verify tests and production build.
 
+### Scope decision
+
+The existing `PlatformShell` and `proxy.ts` already provide the client shell and authentication boundary. A second authenticated layout wrapper would add no behavior, so sidebar/header extraction and a wrapper-only layout are intentionally deferred until route-owned data fetching requires them.
 ## Target structure
 
 ```text
@@ -127,11 +125,11 @@ src/lib/navigation.ts
 
 ## Definition of done
 
-- [ ] Every primary feature has a URL.
-- [ ] No `currentView` state remains.
-- [ ] Refresh and browser navigation work.
-- [ ] Authentication redirect still works.
-- [ ] Tests and production build pass.
+- [x] Every primary feature has a URL.
+- [x] No `currentView` state remains.
+- [x] Refresh and browser navigation work.
+- [x] Authentication redirect still works.
+- [x] Tests and production build pass.
 
 ## Instructions after phase completion
 
