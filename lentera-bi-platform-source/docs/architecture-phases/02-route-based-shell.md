@@ -56,6 +56,18 @@ The platform shell boundary is reusable without introducing a new state layer. R
 
 Primary feature views now have direct URLs without duplicating page files. The legacy shell still renders the view content; full layout/page separation remains a later subphase.
 
+## 2.4 - Root redirect and login separation
+
+- [x] Replace the root client wrapper with a server-side redirect to `/overview`.
+- [x] Keep `/login` outside the platform route group.
+- [x] Preserve proxy authentication behavior for platform routes.
+- [x] Verify the production route table after the change.
+- [x] Smoke-test root redirect, protected /overview, and public /login.
+
+### Result
+
+The root route no longer loads the full client application. Authenticated users enter through `/overview`, while login remains an independent route.
+
 ## Tasks
 
 - [ ] Extract the sidebar from `home-client.tsx`.
