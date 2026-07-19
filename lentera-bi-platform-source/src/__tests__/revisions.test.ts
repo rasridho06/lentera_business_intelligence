@@ -40,4 +40,26 @@ describe('asset revisions', () => {
     expect(JSON.parse(restored.afterJson)).toMatchObject({ name: 'Sales' });
     expect(run.outputRevisionId).toBe(restored.id);
   });
+
+  it('handles concurrent appends without revision collision', async () => {
+    // ponytail: SQLite default journal does not serialize the read-then-write
+    // pattern. Without retry-on-P2002, concurrent appendAssetRevision calls
+    // for the same asset would race on MAX(revision) and surface a unique
+    // constraint error. This test proves the retry path arbitrates the
+    // collision and produces sequential, distinct revision numbers.
+    const results = await Promise.all([
+      appendAssetRevision({ assetType: 'dataset', assetId: 'race-test', action: 'create', after: { v: 1 } }),
+      appendAssetRevision({ assetType: 'dataset', assetId: 'race-test', action: 'create', after: { v: 2 } }),
+      appendAssetRevision({ assetType: 'dataset', assetId: 'race-test', action: 'create', after: { v: 3 } }),
+    ]);
+
+    const revisions = await db.assetRevision.findMany({
+      where: { assetId: 'race-test' },
+      orderBy: { revision: 'asc' },
+    });
+
+    expect(revisions.map(r => r.revision)).toEqual([1, 2, 3]);
+    expect(new Set(revisions.map(r => r.revision)).size).toBe(3);
+    expect(results.map(r => r.revision).sort((a, b) => a - b)).toEqual([1, 2, 3]);
+  });
 });
