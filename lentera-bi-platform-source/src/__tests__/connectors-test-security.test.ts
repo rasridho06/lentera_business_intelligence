@@ -23,7 +23,7 @@ describe('connector test API', () => {
   beforeEach(() => {
     mocks.findUnique.mockReset()
       .mockResolvedValueOnce({ id: 'connector-1', type: 'postgres', host: 'demo-postgres', port: 5432, username: 'postgres', password: 'encrypted-secret', database: 'analytics', schema: null })
-      .mockResolvedValueOnce({ id: 'connector-1', tables: [] });
+      .mockResolvedValueOnce({ id: 'connector-1', password: 'encrypted-secret', tables: [] });
   });
 
   it('uses stored credentials when connectorId is provided', async () => {
@@ -32,6 +32,8 @@ describe('connector test API', () => {
       body: JSON.stringify({ connectorId: 'connector-1', type: 'postgres', host: '', port: 0, username: '', password: '', database: '' }),
     }));
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ success: true, synced: true });
+    const body = await response.json();
+    expect(body).toMatchObject({ success: true, synced: true, connector: { id: 'connector-1' } });
+    expect(body.connector).not.toHaveProperty('password');
   });
 });

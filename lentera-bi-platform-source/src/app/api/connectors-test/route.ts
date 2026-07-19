@@ -337,11 +337,12 @@ export async function POST(request: NextRequest) {
           include: { tables: true },
         });
 
+        const { password: _, ...safeConnector } = updatedConnector || {};
         return NextResponse.json({
           ...result,
           synced: true,
           tableCount: result.tables?.length || 0,
-          connector: updatedConnector,
+          connector: safeConnector,
         });
       }
     }
