@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { createDashboardSchema, updateDashboardSchema, validateBody } from '@/lib/validations';
 
 export async function GET() {
   try {
@@ -20,6 +21,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(createDashboardSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const dashboard = await db.dashboard.create({
       data: {
         name: body.name,
@@ -43,6 +46,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(updateDashboardSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const dashboard = await db.dashboard.update({
       where: { id: body.id },
       data: {

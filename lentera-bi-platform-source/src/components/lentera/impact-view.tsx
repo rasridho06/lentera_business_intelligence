@@ -6,34 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertTriangle, ArrowDown, ArrowUp, Database, GitBranch, BarChart3, LayoutDashboard, LineChart, Search, ChevronRight } from 'lucide-react';
-
-interface ImpactData {
-  sourceNode: {
-    id: string;
-    name: string;
-    type: string;
-    qualifiedName: string;
-  };
-  direction: string;
-  affectedNodes: Array<{
-    id: string;
-    name: string;
-    type: string;
-    platform: string;
-    qualifiedName: string;
-    owner: string | null;
-    status: string | null;
-  }>;
-  affectedPaths: Array<{
-    from: string;
-    to: string;
-    edgeType: string;
-    confidence: string;
-  }>;
-  byType: Record<string, string[]>;
-  confidenceSummary: Record<string, number>;
-  totalAffected: number;
-}
+import type { ImpactData, SearchResult } from '@/types';
 
 const typeIcons: Record<string, React.ReactNode> = {
   source: <Database className="h-4 w-4" />,
@@ -56,18 +29,6 @@ const typeColors: Record<string, string> = {
   column: 'bg-slate-50 text-slate-700 border-slate-200',
   filter: 'bg-pink-50 text-pink-700 border-pink-200',
 };
-
-interface SearchResult {
-  id: string;
-  externalId: string;
-  name: string;
-  type: string;
-  platform: string;
-  qualifiedName: string;
-  description: string | null;
-  owner: string | null;
-  status: string | null;
-}
 
 export function ImpactView({ data, onSearch }: { data: ImpactData | null; onSearch: (query: string) => void }) {
   const [query, setQuery] = useState('');

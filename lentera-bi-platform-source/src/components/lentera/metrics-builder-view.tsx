@@ -14,38 +14,7 @@ import {
   LineChart, Plus, Trash2, Database, Code2, GitBranch, BarChart3,
   ArrowRight, Link2, Clock, Layers, FileCode, Terminal,
 } from 'lucide-react';
-
-interface MetricSourceData {
-  id: string;
-  metricId: string;
-  tableId: string | null;
-  connectorId: string | null;
-  schemaName: string | null;
-  tableName: string;
-  columnName: string | null;
-  role: string;
-  expression: string | null;
-}
-
-interface MetricData {
-  id: string;
-  name: string;
-  description: string | null;
-  expression: string | null;
-  language: string;
-  aggregation: string | null;
-  sourceTableId: string | null;
-  sourceColumn: string | null;
-  filters: string | null;
-  dimensions: string | null;
-  timeGrain: string | null;
-  status: string;
-  branch: string;
-  version: number;
-  ownerUserId: string | null;
-  metricSources: MetricSourceData[];
-  chartMetrics: Array<{ id: string; chart: { id: string; name: string; dashboardId: string } }>;
-}
+import type { MetricSourceData, MetricData } from '@/types';
 
 const roleColors: Record<string, string> = {
   measure: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -283,6 +252,7 @@ export function MetricsBuilderView() {
 function MetricCard({ metric, onDelete }: { metric: MetricData; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const langConfig = languageColors[metric.language];
+  const chevronIcon = expanded ? <ChevronDown /> : <ChevronRight />;
 
   return (
     <Card className="overflow-hidden">
@@ -314,7 +284,7 @@ function MetricCard({ metric, onDelete }: { metric: MetricData; onDelete: (id: s
                   <BarChart3 className="h-2.5 w-2.5 mr-0.5" /> {metric.chartMetrics.length} charts
                 </Badge>
               )}
-              {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            {chevronIcon}
             </div>
           </div>
         </CardContent>

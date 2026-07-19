@@ -14,36 +14,10 @@ import {
   Users, Lock, Unlock, Save, Eye, Edit3, Trash2, GripVertical, Maximize2,
   ArrowRight, Clock, CheckCircle, AlertTriangle, GitMerge,
 } from 'lucide-react';
-
-interface ChartData {
-  id: string;
-  name: string;
-  chartType: string;
-  status: string;
-  config: string | null;
-  chartMetrics: Array<{ id: string; metricId: string; metric: { id: string; name: string; expression: string | null } }>;
-}
-
-interface DashboardData {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string;
-  isPublic: boolean;
-  branch: string;
-  layout: string | null;
-  charts: ChartData[];
-}
-
-interface UserPresence {
-  userId: string;
-  userName: string;
-  userColor: string;
-  dashboardId: string;
-  x: number;
-  y: number;
-  activeChartId: string | null;
-}
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { DashboardChartData, DashboardData, UserPresence } from '@/types';
 
 const chartTypeIcons: Record<string, React.ReactNode> = {
   bar: <BarChart3 className="h-4 w-4" />,
@@ -69,6 +43,36 @@ const demoUsers: UserPresence[] = [
   { userId: 'u2', userName: 'Budi Santoso', userColor: '#7c3aed', dashboardId: 'dash-sales', x: 580, y: 280, activeChartId: null },
 ];
 
+function SortableChartCard({ chart, chartTypeColors, chartTypeIcons }: { chart: DashboardChartData; chartTypeColors: Record<string, string>; chartTypeIcons: Record<string, React.ReactNode> }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: chart.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <Card ref={setNodeRef} style={style} className="hover:shadow-md transition-shadow">
+      <CardContent className="p-3 flex items-center gap-3">
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+          <GripVertical className="h-5 w-5 text-muted-foreground" />
+        </button>
+        <span className={chartTypeColors[chart.chartType]}>
+          {chartTypeIcons[chart.chartType]}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">{chart.name}</p>
+          <p className="text-xs text-muted-foreground">{chart.chartType} • {chart.chartMetrics.length} metrics</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs">
+            <Edit3 className="h-3 w-3" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 text-xs text-destructive">
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DashboardsView() {
   const [dashboards, setDashboards] = useState<DashboardData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +84,11 @@ export function DashboardsView() {
   const [showBranchDialog, setShowBranchDialog] = useState(false);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('view');
+  const [chartOrder, setChartOrder] = useState<string[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
 
   const loadDashboards = useCallback(async () => {
     setLoading(true);
@@ -134,6 +143,22 @@ export function DashboardsView() {
     try { return JSON.parse(config); } catch { return null; }
   };
 
+  const handleDragEnd = async (event: any, dash: DashboardData) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = dash.charts.findIndex(c => c.id === active.id);
+    const newIndex = dash.charts.findIndex(c => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(dash.charts, oldIndex, newIndex);
+    const ids = reordered.map(c => c.id);
+    setChartOrder(ids);
+    await fetch('/api/dashboards', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: dash.id, layout: ids }),
+    });
+  };
+
   // If a dashboard is selected, show its detail view
   if (selectedDashboard) {
     const dash = selectedDashboard;
@@ -182,6 +207,9 @@ export function DashboardsView() {
             </Button>
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowMergeDialog(true)}>
               <GitMerge className="h-3 w-3 mr-1" /> Merge Request
+            </Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => window.print()}>
+              <Maximize2 className="h-3 w-3 mr-1" /> Export
             </Button>
             <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700">
               <Save className="h-3 w-3 mr-1" /> Save
@@ -252,7 +280,7 @@ export function DashboardsView() {
                         <div className="text-center">
                           {chartTypeIcons[chart.chartType] && (
                             <div className="h-12 w-12 mx-auto mb-2 opacity-20">
-                              {React.cloneElement(chartTypeIcons[chart.chartType] as React.ReactElement, { className: 'h-12 w-12' })}
+                              {React.cloneElement(chartTypeIcons[chart.chartType] as React.ReactElement, { className: 'h-12 w-12' } as any)}
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground">Chart Preview</p>
@@ -287,30 +315,13 @@ export function DashboardsView() {
           </TabsContent>
 
           <TabsContent value="edit" className="mt-4">
-            <div className="space-y-3">
-              {dash.charts.map(chart => (
-                <Card key={chart.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                    <span className={chartTypeColors[chart.chartType]}>
-                      {chartTypeIcons[chart.chartType]}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{chart.name}</p>
-                      <p className="text-xs text-muted-foreground">{chart.chartType} • {chart.chartMetrics.length} metrics</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" className="h-7 text-xs">
-                        <Edit3 className="h-3 w-3" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="h-7 text-xs text-destructive">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <DndContext collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, dash)} sensors={sensors}>
+              <SortableContext items={dash.charts.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {dash.charts.map(chart => <SortableChartCard key={chart.id} chart={chart} chartTypeColors={chartTypeColors} chartTypeIcons={chartTypeIcons} />)}
+                </div>
+              </SortableContext>
+            </DndContext>
           </TabsContent>
 
           <TabsContent value="branches" className="mt-4">

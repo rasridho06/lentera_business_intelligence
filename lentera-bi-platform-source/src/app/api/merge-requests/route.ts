@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { createMergeRequestSchema, updateMergeRequestSchema, validateBody } from '@/lib/validations';
 
 export async function GET() {
   try {
@@ -17,6 +18,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(createMergeRequestSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
 
     // Simulate conflict detection
     const sourceBranch = await db.dashboardBranch.findUnique({
@@ -68,6 +71,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(updateMergeRequestSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
 
     if (body.action === 'merge') {
       // Merge: update status and mark branch as merged

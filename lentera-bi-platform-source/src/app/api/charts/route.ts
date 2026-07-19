@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { createChartSchema, updateChartSchema, validateBody } from '@/lib/validations';
 
 export async function GET() {
   try {
@@ -17,6 +18,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(createChartSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const chart = await db.chart.create({
       data: {
         dashboardId: body.dashboardId || null,
@@ -55,6 +58,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(updateChartSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const chart = await db.chart.update({
       where: { id: body.id },
       data: {

@@ -3,57 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, CheckCircle, XCircle, TrendingDown, ArrowRight } from 'lucide-react';
-
-interface MetricsData {
-  canonicalMetrics: Array<{
-    id: string;
-    name: string;
-    aliases: string[];
-    description: string | null;
-    expression: string | null;
-    aggregation: string | null;
-    requiredFilters: string[];
-    dimensions: string[];
-    currencyRequirement: string | null;
-    timeGrain: string | null;
-    owner: string | null;
-    version: string;
-    severityOnDrift: string;
-  }>;
-  observedMetrics: Array<{
-    id: string;
-    name: string;
-    qualifiedName: string;
-    description: string | null;
-    owner: string | null;
-    metadata: Record<string, unknown>;
-  }>;
-  comparisons: Array<{
-    canonical: {
-      id: string;
-      name: string;
-      aliases: string[];
-      description: string | null;
-      expression: string | null;
-      aggregation: string | null;
-      requiredFilters: string[];
-      dimensions: string[];
-      currencyRequirement: string | null;
-      timeGrain: string | null;
-      owner: string | null;
-      version: string;
-      severityOnDrift: string;
-    };
-    observed: Array<{
-      id: string;
-      name: string;
-      qualifiedName: string;
-      description: string | null;
-      metadata: Record<string, unknown>;
-    }>;
-    driftStatus: string;
-  }>;
-}
+import type { MetricsData } from '@/types';
 
 export function MetricsView({ data }: { data: MetricsData }) {
   return (
@@ -198,10 +148,10 @@ export function MetricsView({ data }: { data: MetricsData }) {
                       <div key={obs.id} className="space-y-1.5 text-xs mb-2 last:mb-0">
                         <div><span className="text-muted-foreground">Name:</span> <strong>{obs.name}</strong></div>
                         <div><span className="text-muted-foreground">Qualified:</span> <code>{obs.qualifiedName}</code></div>
-                        {obs.metadata?.expression && (
+                        {!!obs.metadata?.expression && (
                           <div><span className="text-muted-foreground">Expression:</span> <code className="bg-violet-50 px-1 rounded">{obs.metadata.expression as string}</code></div>
                         )}
-                        {obs.metadata?.aggregation && (
+                        {!!obs.metadata?.aggregation && (
                           <div><span className="text-muted-foreground">Aggregation:</span> <code className="uppercase">{obs.metadata.aggregation as string}</code></div>
                         )}
                       </div>

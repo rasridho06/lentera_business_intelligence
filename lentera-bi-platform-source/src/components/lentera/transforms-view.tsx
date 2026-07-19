@@ -14,24 +14,7 @@ import {
   AlertCircle, Database, ArrowRight, FileOutput, GitBranch,
   RefreshCw, Loader2, Wrench,
 } from 'lucide-react';
-
-interface TransformData {
-  id: string;
-  name: string;
-  description: string | null;
-  type: string;
-  code: string;
-  config: string | null;
-  inputTables: string | null;
-  outputSpec: string | null;
-  schedule: string | null;
-  lastRunAt: string | null;
-  lastRunStatus: string | null;
-  environment: string | null;
-  status: string;
-  branch: string;
-  ownerUserId: string | null;
-}
+import type { TransformData } from '@/types';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   success: { icon: <CheckCircle className="h-4 w-4" />, color: 'text-green-600' },

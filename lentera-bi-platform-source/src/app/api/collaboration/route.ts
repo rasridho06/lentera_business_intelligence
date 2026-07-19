@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { collaborationSchema, validateBody } from '@/lib/validations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +29,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(collaborationSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const session = await db.collaborationSession.upsert({
       where: { dashboardId_userId: { dashboardId: body.dashboardId, userId: body.userId } },
       create: {

@@ -10,10 +10,6 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 30000,
     include: ['src/__tests__/**/*.test.ts'],
-    // Unit tests run independently, integration/system/UAT need server
-    sequence: {
-      sequential: true,
-    },
   },
   resolve: {
     alias: {

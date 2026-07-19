@@ -19,6 +19,7 @@ import {
   Code2, Terminal, Database, LayoutGrid, Save, ChevronDown, ChevronRight,
   Settings2, Palette, X, Check, Maximize2, Move,
 } from 'lucide-react';
+import type { ChartConfig, ChartDetailData, DashboardOption, DatasetOption, ConnectorOption } from '@/types';
 
 // ── Recharts imports ──
 import {
@@ -34,12 +35,11 @@ function generateDemoData(chartType: string, configOverride?: ChartConfig | null
   // Try to use real data from config.chartData
   if (configOverride || configJsonString) {
     const cfg = configOverride || (configJsonString ? parseConfigSafe(configJsonString) : null);
-    if (cfg && (cfg as Record<string, unknown>).chartData && Array.isArray((cfg as Record<string, unknown>).chartData)) {
-      const realData = (cfg as Record<string, unknown>).chartData as unknown[];
+    if (cfg && (cfg as any).chartData && Array.isArray((cfg as any).chartData)) {
+      const realData = (cfg as any).chartData as unknown[];
       if (realData.length > 0) {
-        // For pie charts, transform data to {name, value, color} format
         if (chartType === 'pie') {
-          const dim = (cfg as Record<string, unknown>).dimension as string || (cfg as ChartConfig).xAxis || 'name';
+          const dim = (cfg as any).dimension as string || (cfg as ChartConfig).xAxis || 'name';
           const metricKey = ((cfg as ChartConfig).yAxis && (cfg as ChartConfig).yAxis[0]) || 'value';
           // Check if data is already in {name, value} format
           const firstItem = realData[0] as Record<string, unknown>;
@@ -56,7 +56,7 @@ function generateDemoData(chartType: string, configOverride?: ChartConfig | null
         }
         // For metric_card, transform to card format
         if (chartType === 'metric_card') {
-          const metrics = (cfg as Record<string, unknown>).metrics as Array<{ label: string; value: string; change: string; changeType: string }> | undefined;
+          const metrics = (cfg as any).metrics as Array<{ label: string; value: string; change: string; changeType: string }> | undefined;
           if (metrics && Array.isArray(metrics)) {
             return metrics.map(m => ({
               label: m.label,
@@ -179,24 +179,6 @@ const CHART_PALETTES = {
   sequential: ['#d1fae5', '#6ee7b7', '#34d399', '#10b981', '#059669', '#047857', '#065f46'],
 };
 
-// ── Chart configuration ──
-interface ChartConfig {
-  xAxis: string;
-  yAxis: string[];
-  metrics: string[];
-  dimensions: string[];
-  colorPalette: keyof typeof CHART_PALETTES;
-  showLegend: boolean;
-  showGrid: boolean;
-  showLabels: boolean;
-  stacked: boolean;
-  smooth: boolean;
-  orientation: 'vertical' | 'horizontal';
-  donut: boolean;
-  aggregateFunction: 'sum' | 'avg' | 'count' | 'min' | 'max';
-  limit: number;
-}
-
 const defaultConfig: ChartConfig = {
   xAxis: 'name',
   yAxis: ['Revenue'],
@@ -241,7 +223,7 @@ function ChartRenderer({ chartType, data, config: rawConfig, height = 300 }: {
     return safe as ChartConfig;
   }, [rawConfig]);
 
-  const colors = CHART_PALETTES[config.colorPalette] || CHART_PALETTES.superset;
+  const colors = CHART_PALETTES[config.colorPalette as keyof typeof CHART_PALETTES] || CHART_PALETTES.superset;
 
   switch (chartType) {
     case 'bar':
@@ -512,8 +494,8 @@ function ChartRenderer({ chartType, data, config: rawConfig, height = 300 }: {
 
 // ── Full chart editor modal ──
 function ChartEditor({ chart, onSave, onCancel, connectors, datasets }: {
-  chart: ChartData;
-  onSave: (updated: ChartData & { config: ChartConfig }) => void;
+  chart: ChartDetailData;
+  onSave: (updated: ChartDetailData & { config: ChartConfig }) => void;
   onCancel: () => void;
   connectors: ConnectorOption[];
   datasets: DatasetOption[];
@@ -578,7 +560,7 @@ function ChartEditor({ chart, onSave, onCancel, connectors, datasets }: {
             <Button variant="outline" size="sm" onClick={onCancel}>
               <X className="h-3 w-3 mr-1" /> Cancel
             </Button>
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => onSave({ ...chart, name, chartType, config, dataSourceType, customSQL, datasetId })}>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => onSave({ ...chart, name, chartType, config: config as any, dataSourceType, customSQL, datasetId })}>
               <Save className="h-3 w-3 mr-1" /> Save
             </Button>
           </div>
@@ -691,7 +673,7 @@ function ChartEditor({ chart, onSave, onCancel, connectors, datasets }: {
                         className="rounded-full border-gray-300"
                       />
                       <div className="flex gap-0.5">
-                        {(Array.isArray(palette) ? palette.slice(0, 6) : palette.slice(0, 6)).map((color, i) => (
+                        {(palette as string[]).slice(0, 6).map((color, i) => (
                           <div key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />
                         ))}
                       </div>
@@ -779,41 +761,6 @@ function ChartEditor({ chart, onSave, onCancel, connectors, datasets }: {
   );
 }
 
-// ── Main Charts View ──
-interface ChartData {
-  id: string;
-  name: string;
-  chartType: string;
-  description: string | null;
-  status: string;
-  branch: string;
-  dashboardId: string | null;
-  datasetId: string | null;
-  dataSourceType: string | null;
-  config: string | null;
-  customSQL: string | null;
-  chartMetrics: Array<{ id: string; metricId: string; metric: { id: string; name: string; expression: string | null } }>;
-  dashboard: { id: string; name: string } | null;
-}
-
-interface DashboardOption {
-  id: string;
-  name: string;
-}
-
-interface DatasetOption {
-  id: string;
-  name: string;
-  type: string;
-}
-
-interface ConnectorOption {
-  id: string;
-  name: string;
-  type: string;
-  tables: Array<{ id: string; name: string; schema: string | null; columns: string | null }>;
-}
-
 const chartTypeOptions = [
   { value: 'bar', label: 'Bar Chart', icon: <BarChart3 className="h-4 w-4" /> },
   { value: 'line', label: 'Line Chart', icon: <LineChartIcon className="h-4 w-4" /> },
@@ -841,7 +788,7 @@ const chartTypeColors: Record<string, string> = {
 };
 
 export function ChartsView() {
-  const [charts, setCharts] = useState<ChartData[]>([]);
+  const [charts, setCharts] = useState<ChartDetailData[]>([]);
   const [dashboards, setDashboards] = useState<DashboardOption[]>([]);
   const [datasets, setDatasets] = useState<DatasetOption[]>([]);
   const [connectors, setConnectors] = useState<ConnectorOption[]>([]);
@@ -851,7 +798,7 @@ export function ChartsView() {
   const [selectedChartId, setSelectedChartId] = useState<string | null>(null);
   const [insertDashboardId, setInsertDashboardId] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editingChart, setEditingChart] = useState<ChartData | null>(null);
+  const [editingChart, setEditingChart] = useState<ChartDetailData | null>(null);
   const [newChart, setNewChart] = useState({
     name: '', description: '', chartType: 'bar', dataSourceType: 'table',
     customSQL: '', datasetId: '', dashboardId: '',
@@ -914,7 +861,7 @@ export function ChartsView() {
     loadData();
   };
 
-  const handleSaveChart = async (updated: ChartData & { config: ChartConfig }) => {
+  const handleSaveChart = async (updated: ChartDetailData & { config: ChartConfig }) => {
     await fetch('/api/charts', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -1177,12 +1124,12 @@ export function ChartsView() {
 
 // ── Chart Card with real rendering ──
 function ChartCard({ chart, expanded, onToggle, onDelete, onInsertDashboard, onEdit, parseConfig }: {
-  chart: ChartData;
+  chart: ChartDetailData;
   expanded: boolean;
   onToggle: () => void;
   onDelete: (id: string) => void;
   onInsertDashboard: (chartId: string) => void;
-  onEdit: (chart: ChartData) => void;
+  onEdit: (chart: ChartDetailData) => void;
   parseConfig: (s: string | null) => ChartConfig;
 }) {
   const config = parseConfig(chart.config);

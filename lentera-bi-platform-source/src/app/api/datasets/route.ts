@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { createDatasetSchema, updateDatasetSchema, validateBody } from '@/lib/validations';
 
 export async function GET() {
   try {
@@ -16,6 +17,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(createDatasetSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const dataset = await db.dataset.create({
       data: {
         name: body.name,
@@ -43,6 +46,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validateBody(updateDatasetSchema, body);
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 });
     const dataset = await db.dataset.update({
       where: { id: body.id },
       data: {
