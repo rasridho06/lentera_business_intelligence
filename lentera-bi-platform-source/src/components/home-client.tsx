@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   LayoutDashboard, GitBranch, Shield, LineChart, Search,
   Database, BarChart3, AlertTriangle, ChevronRight, ArrowLeft,
@@ -17,6 +17,7 @@ import {
 import { useTheme } from 'next-themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { PlatformShell } from '@/components/platform-shell';
 
 const OverviewView = dynamic(() => import('@/components/lentera/overview-view').then(m => ({ default: m.OverviewView })), { ssr: false });
 const LineageView = dynamic(() => import('@/components/lentera/lineage-view').then(m => ({ default: m.LineageView })), { ssr: false });
@@ -146,8 +147,8 @@ export default function HomeClient() {
   ];
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen flex bg-background">
+    <PlatformShell>
+      <div>
         <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} border-r bg-card transition-all duration-200 flex flex-col shrink-0`}>
           <div className="p-4 border-b flex items-center gap-2">
             <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-600 text-white shrink-0">
@@ -396,6 +397,6 @@ export default function HomeClient() {
           </ScrollArea>
         </main>
       </div>
-    </TooltipProvider>
+    </PlatformShell>
   );
 }

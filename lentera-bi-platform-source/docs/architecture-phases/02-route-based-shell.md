@@ -22,6 +22,27 @@ Work for this phase belongs only to `codex/phase-2-route-shell`. If this phase i
 
 The application has no feature URL routes yet. The root route loads the full client shell, and navigation is state-driven. Phase 2 will make the URL the single source of truth without changing API contracts or business logic.
 
+## 2.1 - Centralize navigation configuration
+
+- [x] Move `ViewType`, `NavItem`, `navSections`, and `allNavItems` to `src/lib/navigation.ts`.
+- [x] Render icon components from the shared navigation definition.
+- [x] Keep `currentView` and `switchView` unchanged until route migration.
+
+### Result
+
+Navigation metadata now has one caller-independent source. No route or behavior changed.
+
+## 2.2 - Extract the platform shell boundary
+
+- [x] Create `src/components/platform-shell.tsx`.
+- [x] Move the shared `TooltipProvider` and root platform wrapper into the shell.
+- [x] Keep sidebar, header, view state, and data fetching in `home-client.tsx` until route extraction.
+- [x] Run tests and production build.
+
+### Result
+
+The platform shell boundary is reusable without introducing a new state layer. Route pages can adopt it in the next subphase.
+
 ## Tasks
 
 - [ ] Extract the sidebar from `home-client.tsx`.
