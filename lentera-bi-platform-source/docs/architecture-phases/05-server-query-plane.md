@@ -29,7 +29,7 @@ The query plane relies on the Phase 4 SQLite metadata store (`lentera.db`) and i
 Phase 5 is split into three manageable PRs to keep each diff reviewable:
 
 - **5a — Read-only SQL contract + ClickHouse adapter** (subphases 5.0 + 5.1): ✅ done — authenticated server query contract, allowlisted connector IDs, server-side credentials, identifier quoting, bounded JSON rows, timeout/row/byte limits, structured error responses.
-- **5b — Virtual SQL/Python datasets** (subphase 5.2): persist dataset code + language + dependencies + schema snapshot + owner + revision ID, validate SQL before save, cycle detection, revalidation on upstream schema change, dependency precision labeling.
+- **5b — Virtual SQL/Python datasets** (subphase 5.2): ✅ done — persist dataset code + language + dependencies + schema snapshot + owner + revision ID, validate SQL before save, cycle detection, revalidation on upstream schema change, dependency precision labeling.
 - **5c — Contracts and preview** (subphase 5.3): column existence/type/nullability/uniqueness/freshness contracts, bounded preview + contract check before publish, machine-readable structured failures, audit-linked revision on validation outcome.
 
 ### 5a implementation record
@@ -40,6 +40,17 @@ Phase 5 is split into three manageable PRs to keep each diff reviewable:
 - `src/app/api/query/execute/route.ts` — POST /api/query/execute. Resolves connector from SQLite metadata, builds table allowlist from DataSourceTable rows, validates SQL, executes through adapter, returns bounded response.
 - `src/__tests__/query-execute.test.ts` — 25 tests covering SQL validator + route handler (missing fields, unknown connector, non-read-only, table not in allowlist, limit clamping). 169/169 total tests pass with zero regressions.
 - Branch: `codex/phase-5a-query-contract`
+
+### 5b implementation record
+
+- `prisma/schema.prisma` — `DatasetDependency` model: tracks which tables/datasets a virtual dataset references in its SQL. Confidence label: `table_level` default, `column_level` when parsing is confident (Phase 5c + Phase 7 upgrade to sqlglot).
+- `prisma/migrations/20260720150000_dataset_dependencies` — migration creating `DatasetDependency` with FK cascade to Dataset.
+- `src/lib/query/dependency.ts` — `resolveDependencies` (parses SQL, extracts table refs, resolves to connector tables or other datasets by name, connector tables take priority), `detectCycles` (BFS through `dependsOnDatasetId` edges), `validateVirtualDataset` (full pipeline with cycle guard: writes temp edges, checks, rolls back on cycle), `replaceDependencies` (deleteMany + createMany).
+- `src/app/api/datasets/validate/route.ts` — `POST /api/datasets/validate`: validates SQL and returns dependency graph without persisting.
+- `src/app/api/datasets/revalidate/route.ts` — `POST /api/datasets/revalidate`: re-validates a stored dataset when upstream changes. Clears stale deps on failure.
+- `src/app/api/datasets/route.ts` — Enhanced POST/PUT with auto-validation + dependency population + `appendAssetRevision`. DELETE cleans up `DatasetDependency` rows + writes a delete revision.
+- `src/__tests__/dataset-deps.test.ts` — 9 tests covering resolution, mixed refs, direct + transitive cycles, no-cycle graphs, read-only rejection, and valid acceptance.
+- Branch: `codex/phase-5b-virtual-datasets`
 
 ### Browser preview sandbox (sql.js carve-out)
 
@@ -61,12 +72,12 @@ The `/query` route hosts a browser-only SQLite preview sandbox via `sql.js`. The
 
 ## 5.2 - Virtual SQL datasets
 
-- [ ] Persist virtual dataset SQL or Python code, language, source asset IDs, output schema snapshot, owner, and revision ID.
-- [ ] Validate SQL before save and resolve direct dependencies.
+- [x] Persist virtual dataset SQL or Python code, language, source asset IDs, output schema snapshot, owner, and revision ID.
+- [x] Validate SQL before save and resolve direct dependencies.
 - [ ] Run Python only in a server-side sandbox with an allowlisted runtime and packages; never execute arbitrary request code in the Next.js process.
-- [ ] Reject circular virtual dataset references.
-- [ ] Revalidate a virtual dataset when an upstream schema or relationship changes.
-- [ ] Label dependency precision as column-level only when parsing is confident; otherwise retain a table-level edge.
+- [x] Reject circular virtual dataset references.
+- [x] Revalidate a virtual dataset when an upstream schema or relationship changes.
+- [x] Label dependency precision as column-level only when parsing is confident; otherwise retain a table-level edge.
 
 ## 5.3 - Semantic contracts and preview
 
