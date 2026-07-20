@@ -204,6 +204,8 @@ model Dataset {
   updatedAt     DateTime  @updatedAt
 
   dashboard     Dashboard? @relation(fields: [dashboardId], references: [id])
+  dependencies  DatasetDependency[]
+  dependentOf   DatasetDependency[] @relation("DependentDataset")
 }
 
 // --- Chart ---
@@ -481,4 +483,25 @@ model ApiLog {
   @@index([path])
   @@index([status])
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════
+// VIRTUAL DATASET DEPENDENCIES (Phase 5b)
+// ═══════════════════════════════════════════
+
+model DatasetDependency {
+  id                 String   @id @default(cuid())
+  datasetId          String   // dataset that depends
+  dependsOnDatasetId String?  // target virtual dataset (nullable for source-table refs)
+  dependsOnTable     String?  // target table name from a connector
+  connectorId        String?  // connector owning the table
+  dependencyType     String   // source_table | virtual_dataset | python_transform
+  confidence         String   @default("table_level") // table_level | column_level
+  createdAt          DateTime @default(now())
+
+  dataset            Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  dependsOn          Dataset? @relation("DependentDataset", fields: [dependsOnDatasetId], references: [id], onDelete: SetNull)
+
+  @@index([datasetId])
+  @@index([dependsOnDatasetId])
 }
