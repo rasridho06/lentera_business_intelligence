@@ -1,4 +1,16 @@
+import { readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
+
+// ponytail: Prisma schema auto-loads .env but the spawned seed process does
+// not inherit it on Windows. Parse DATABASE_URL manually from the project
+// .env so `npx tsx prisma/seed.ts` works without an explicit env flag.
+try {
+  const env = readFileSync(new URL('.env', import.meta.url).pathname, 'utf8');
+  for (const line of env.split('\n')) {
+    const m = line.match(/^\s*([^#=\s]+)\s*=\s*(.*?)\s*$/);
+    if (m) process.env[m[1]] = m[2].replace(/"'/g, '');
+  }
+} catch { /* .env optional in production — DATABASE_URL must be set via env */ }
 
 const db = new PrismaClient();
 
