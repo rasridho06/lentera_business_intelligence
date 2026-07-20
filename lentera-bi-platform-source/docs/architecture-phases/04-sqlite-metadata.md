@@ -79,11 +79,11 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 
 ## Definition of done
 
-- [ ] App runs with Node.js and one SQLite file.
-- [ ] Seed is repeatable without duplicates.
-- [ ] Tests do not mutate the development database.
-- [ ] Every governed asset has immutable revision and audit records.
-- [ ] Restore creates a new revision and preserves history.
+- [x] App runs with Node.js and one SQLite file.
+- [x] Seed is repeatable without duplicates.
+- [x] Tests do not mutate the development database.
+- [x] Every governed asset has immutable revision and audit records.
+- [x] Restore creates a new revision and preserves history.
 
 ## Review focus
 
@@ -116,3 +116,48 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 - `src/lib/revisions.ts` sanitizes password, secret, token, API-key, credential, and file-content fields before persistence; content hashes are computed from the sanitized after snapshot.
 - Restore reads a historical snapshot and appends a new `restore` revision. It never changes historical revision rows.
 - `npm test` now recreates the ignored SQLite test database from migrations before every run. The focused revision test proves redaction, revision sequence, restore-as-new-revision, and job-run linkage.
+
+## 4.3 implementation record
+
+Semantic metadata foundation rescoped to Phase 7 per analysis decision (Option C). Rationale: Relationship validation is tightly coupled with lineage traversal (7.0), metric certification is part of trust UX (7.4), and the foundation row would be a dead bridge without the lineage linkage that 7.0 provides. Phase 4 deliverables that directly support the rescoping: Edge `assetType`/`assetId`/`sourceRevisionId` columns (R6), `'relationship'` removed from GOVERNED_ASSET_TYPES (R5), and scheduler fields on JobDefinition (R4). Phase 7.0a subphase doc added to `07-lineage-final-hardening.md`.
+
+## 4.4 implementation record
+
+Seed idempotency achieved via a minimal in-file `.env` loader (`import.meta.url` + `node:fs` — no `dotenv` dependency) so `npx tsx prisma/seed.ts` picks up `DATABASE_URL` from the project `.env` on Windows. Two consecutive seed runs produce identical output: 3 users, 3 dashboards, 50 nodes, 37 edges, 9 findings. No duplicates, no AssetRevision records leaked because the seed operates on raw Prisma models via `deleteMany`-then-`create` and never calls `appendAssetRevision`. `tsx` added to `devDependencies` (R7).
+
+## 4.5 implementation record
+
+Handoff complete. PR opened against `main` with 10 commits (4 original + 6 remedial R1-R7). Verification gates passed:
+
+| Gate | Result |
+|---|---|
+| `npm run lint` | exit 0 |
+| `npm test` | 144/144 passed |
+| `npm run build` | exit 0, 23/23 pages |
+| 2x seed | 50 nodes, 37 edges, 9 findings identical |
+| Scope audit | `git diff main..HEAD --name-only` — only 19 Phase 4 metadata files |
+
+## Remedial items (R1-R7) from PR #6 review
+
+| ID | Commit | Summary |
+|---|---|---|
+| R1 | `2277b95` | Retry-on-P2002: `createRevisionWithRetry` wrapper handles concurrent append race |
+| R2 | `2277b95` | Concurrency test: `Promise.all` of 3 calls → 3 distinct revisions 1, 2, 3 |
+| R3 | `40d4f91` | `scripts/setup-dev-db.mjs` + `db:setup` script (EPERM bypass) |
+| R4 | `a4ccdde` | JobDefinition scheduler fields: lockKey, lockedAt, consecutiveFailures, missedRunPolicy |
+| R5 | `2277b95` | Removed `'relationship'` from GOVERNED_ASSET_TYPES (defer to Phase 7) |
+| R6 | `a4ccdde` | Edge lineage linkage columns: assetType, assetId, sourceRevisionId |
+| R7 | `6cc8b0b` | `tsx` devDependency for seed runner |
+
+### Day 4 result
+
+- Status: **done** (PR open, pending merge)
+- Branch: `codex/phase-4-sqlite-metadata`
+- Commit: `4fedcff`
+- Tests: 144/144 passed
+- Build: exit 0
+- Before: PostgreSQL required, no revisions/audit trail, Prisma migrate EPERM on Windows
+- After: SQLite single-file metadata, append-only revisions, audit events, job definition/run storage, local migration replay via `node:sqlite`, retry-safe concurrent appends
+- Completed: 4.0 guard rails, 4.1 SQLite migration, 4.2 immutable revisions, 4.3 (rescope), 4.4 seed, 4.5 handoff, R1-R7
+- Deferred: Relationship model → Phase 7.0, schema snapshots → Phase 7.2, metric certification → Phase 7.4
+- Blocker: none

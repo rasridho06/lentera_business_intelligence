@@ -10,10 +10,13 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 7.0 - Governed asset graph
 
+Phase 4 prework: `'relationship'` was removed from `GOVERNED_ASSET_TYPES` (R5) until the Relationship model exists in this phase. Edge columns `assetType`, `assetId`, `sourceRevisionId` were added in R6 so 7.0a can backfill lineage edges without a second migration.
+
 - [ ] Define stable identifiers for file, physical table, virtual dataset, metric, relationship, chart, and dashboard assets.
 - [ ] Reuse the existing Node and Edge model; do not add a graph database.
 - [ ] Define empty graph, orphan edge, depth, node-limit, and dependency-confidence behavior.
 - [ ] Link every edge to the asset revision and extraction evidence that created it.
+- [ ] Add Relationship model (source/target table and column, cardinality, filter direction, active state, owner, validation status) and restore `'relationship'` to `GOVERNED_ASSET_TYPES`.
 
 ### 7.0a - Lineage linkage retrofit
 
@@ -83,6 +86,7 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 - [ ] A breaking change identifies every impacted downstream asset and explains the failure.
 - [ ] Repair suggestions are reviewable and never silently alter SQL.
 - [ ] Tests and build pass without PostgreSQL, Redis, workers, or a microservice requirement.
+- [x] Edge lineage linkage columns (`assetType`, `assetId`, `sourceRevisionId`) added by Phase 4 R6. (7.0a)
 
 ## Review focus
 

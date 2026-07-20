@@ -15,6 +15,23 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [ ] Reject non-read-only SQL for preview and virtual dataset execution.
 - [ ] Keep database credentials, Python runtime access, and full result sets on the server.
 
+### Phase 4 foundation
+
+The query plane relies on the Phase 4 SQLite metadata store (`lentera.db`) and its Prisma schema:
+
+- **Connector + DataSourceTable models**: store allowed data sources — use `connectorId` allowlisting to bound every query.
+- **AssetRevision + AuditEvent**: every virtual dataset save and contract validation outcome is persisted as an audit-linked revision event.
+- **JobDefinition + JobRun**: stores schedule metadata and execution history; the Phase 6.4 scheduler runner will lock and claim jobs via the `lockKey`/`lockedAt` columns added in R4.
+- **Edge lineage linkage columns** (`assetType`, `assetId`, `sourceRevisionId`): nullable in Phase 4; Phase 7.0a will populate them when the lineage workflow ties semantic revisions to graph edges.
+
+### Subphase split (scope decision)
+
+Phase 5 is split into three manageable PRs to keep each diff reviewable:
+
+- **5a — Read-only SQL contract + ClickHouse adapter** (subphases 5.0 + 5.1): authenticated server query contract, allowlisted connector IDs, server-side credentials, identifier quoting, bounded JSON rows, timeout/row/byte limits, structured error responses.
+- **5b — Virtual SQL/Python datasets** (subphase 5.2): persist dataset code + language + dependencies + schema snapshot + owner + revision ID, validate SQL before save, cycle detection, revalidation on upstream schema change, dependency precision labeling.
+- **5c — Contracts and preview** (subphase 5.3): column existence/type/nullability/uniqueness/freshness contracts, bounded preview + contract check before publish, machine-readable structured failures, audit-linked revision on validation outcome.
+
 ### Browser preview sandbox (sql.js carve-out)
 
 The `/query` route hosts a browser-only SQLite preview sandbox via `sql.js`. The carve-out from the auth-protected query plane is explicit and limited.
@@ -70,10 +87,11 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 
 ## Definition of done
 
-- [ ] Browser never receives database credentials or unbounded result sets.
-- [ ] Virtual datasets are SQL- or Python-backed, versioned, and dependency-aware.
-- [ ] Bad SQL and contract violations return actionable structured errors.
-- [ ] Upstream changes trigger virtual dataset revalidation.
+- [ ] Browser never receives database credentials or unbounded result sets. (5a)
+- [ ] Virtual datasets are SQL- or Python-backed, versioned, and dependency-aware. (5b)
+- [ ] Bad SQL and contract violations return actionable structured errors. (5a + 5c)
+- [ ] Upstream changes trigger virtual dataset revalidation. (5b)
+- [x] Browser preview sandbox (sql.js carve-out) contract documented and enforced in code. (hygiene patch PR #6)
 
 ## Review focus
 

@@ -10,6 +10,13 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 6.0 - Upload boundary
 
+Phase 4 and Phase 5 provide the foundation this phase extends:
+
+- **Scheduler schema already ready** — Phase 4 R4 added `lockKey`, `lockedAt`, `consecutiveFailures`, and `missedRunPolicy` to `JobDefinition`. The Phase 6.4 scheduler runner can lock and claim the next runnable job with a single indexed scan on `(enabled, nextRunAt, lockKey)` without a separate migration.
+- **Preview sandbox coexistence** — The Phase 5a server-side query contract and the Phase 5.0 browser `sql.js` sandbox both accept CSV input. Clarify the boundary:
+  - Browser sandbox: ad-hoc preview, in-memory, no credentials, bounded to 10 000 rows / 5 MB. Not publishable.
+  - DuckDB ingestion (this phase): server-side, produces a versioned `DataSourceTable` asset with schema hash, linked to a `source-file` revision. The result flows through the Phase 5b virtual dataset pipeline and into charts/dashboards.
+
 - [ ] Support CSV, XLSX, and Parquet through one server-side upload contract.
 - [ ] Enforce file size, file count, MIME/signature, extension, row, and disk-lifetime limits.
 - [ ] Store uploads under generated IDs in a Git-ignored directory; never trust a client filename or path.
