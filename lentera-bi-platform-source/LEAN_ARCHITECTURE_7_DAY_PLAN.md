@@ -6,7 +6,9 @@
 ## Target outcome
 
 ```text
-CSV/XLSX/Parquet -> physical table -> virtual SQL dataset -> semantic model -> chart -> dashboard
+CSV/XLSX/Parquet -> physical table -> SQL/Python dataset -> semantic model -> chart -> dashboard
+                                      |
+                                      +-> scheduled refresh -> output revision
                                   |                                      |
                                   +-> revision/audit -> contracts -> relationship manager -> lineage -> impact
 ```
@@ -15,13 +17,15 @@ Lentera is not only a BI builder. It is a change-safe BI workspace: every semant
 
 ## Phases
 
-1. [Day 1 - Runtime and baseline](docs/architecture-phases/01-runtime-baseline.md)
-2. [Day 2 - Route-based application shell](docs/architecture-phases/02-route-based-shell.md)
-3. [Day 3 - Client boundaries and bundle](docs/architecture-phases/03-client-boundary-bundle.md)
-4. [Day 4 - Local metadata, revisions, and audit](docs/architecture-phases/04-sqlite-metadata.md)
-5. [Day 5 - Secure query plane and virtual datasets](docs/architecture-phases/05-server-query-plane.md)
-6. [Day 6 - Universal ingestion and BI authoring](docs/architecture-phases/06-duckdb-bi-core-flow.md)
+1. ✓ [Day 1 - Runtime and baseline](docs/architecture-phases/01-runtime-baseline.md) — merged PR #2
+2. ✓ [Day 2 - Route-based application shell](docs/architecture-phases/02-route-based-shell.md) — merged PR #3
+3. ✓ [Day 3 - Client boundaries and bundle](docs/architecture-phases/03-client-boundary-bundle.md) — merged PR #5
+4. → [Day 4 - Local metadata, revisions, audit, and job definitions](docs/architecture-phases/04-sqlite-metadata.md) — PR open
+5. [Day 5 - Secure query plane, Python execution, and virtual datasets](docs/architecture-phases/05-server-query-plane.md)
+6. [Day 6 - Universal ingestion, BI authoring, and scheduled refresh](docs/architecture-phases/06-duckdb-bi-core-flow.md)
 7. [Day 7 - Change-safe semantic governance](docs/architecture-phases/07-lineage-final-hardening.md)
+
+_Also: [Phase 2/3 hygiene patch](docs/architecture-phases/02-route-based-shell.md) — merged PR #6 (cross-phase regression + side-effect + wasm asset fix from main; not a standalone phase)._
 
 ## Scope boundaries
 
@@ -31,7 +35,7 @@ Lentera is not only a BI builder. It is a change-safe BI workspace: every semant
 - Full files and connector secrets never enter browser memory or API responses.
 - Git-like history means immutable asset revisions, diffs, approval state, and restore inside Lentera. It does not mean embedding a Git server.
 - Column-level dependency capture is limited to SQL expressions that can be parsed confidently. Unknown expressions remain table-level and are labeled as such.
-- Redis, workers, OpenLineage receiver, collaboration automation, extra connectors, and natural-language query generation are deferred.
+- Airflow, Redis, distributed workers, OpenLineage receiver, collaboration automation, extra connectors, and natural-language query generation are deferred. Local scheduling uses one SQLite-backed scheduler process with per-job locks and bounded retries.
 
 ## Product differentiator
 
@@ -51,6 +55,7 @@ Commodity BI features are import, SQL, charts, dashboards, and static lineage. L
 3. After a phase PR is merged, checkout `main` and pull `main` before starting the next large phase.
 4. Commit only work belonging to the active phase.
 5. Keep unrelated local files, archives, backups, credentials, and other phase work out of the branch.
+6. **Precedent** — A cross-phase regression fix (e.g. PR #6, Phase 2 layout bug) may land in its own dedicated branch and merge to `main` before the next phase rebase. The affected phase docs are updated as part of that PR.
 
 ## Required daily routine
 

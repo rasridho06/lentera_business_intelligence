@@ -13,6 +13,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
+    "db:setup": "node scripts/setup-dev-db.mjs && prisma generate",
+    "pretest": "node scripts/setup-test-db.mjs",
     "test": "vitest run",
     "test:unit": "vitest run src/__tests__/unit.test.ts",
     "test:integration": "vitest run src/__tests__/integration.test.ts",
@@ -73,6 +75,7 @@
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
+    "tsx": "^4.19.2",
     "typescript": "^5",
     "vitest": "^4.1.10"
   },

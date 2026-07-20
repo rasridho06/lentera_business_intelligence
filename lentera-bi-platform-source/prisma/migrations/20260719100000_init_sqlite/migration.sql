@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE "Node" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "projectId" TEXT NOT NULL DEFAULT 'hungryhub-analytics',
     "externalId" TEXT NOT NULL,
     "platform" TEXT NOT NULL,
@@ -12,15 +12,13 @@ CREATE TABLE "Node" (
     "status" TEXT,
     "metadata" TEXT,
     "definitionHash" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Node_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "Edge" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "sourceNodeId" TEXT NOT NULL,
     "targetNodeId" TEXT NOT NULL,
     "edgeType" TEXT NOT NULL,
@@ -30,15 +28,15 @@ CREATE TABLE "Edge" (
     "extractionMethod" TEXT,
     "evidence" TEXT,
     "metadata" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Edge_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Edge_sourceNodeId_fkey" FOREIGN KEY ("sourceNodeId") REFERENCES "Node" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Edge_targetNodeId_fkey" FOREIGN KEY ("targetNodeId") REFERENCES "Node" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "Finding" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "ruleId" TEXT NOT NULL,
     "ruleVersion" TEXT NOT NULL DEFAULT '1.0',
     "severity" TEXT NOT NULL,
@@ -50,16 +48,16 @@ CREATE TABLE "Finding" (
     "recommendation" TEXT,
     "status" TEXT NOT NULL DEFAULT 'open',
     "suppressionReason" TEXT,
-    "suppressionExpiry" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Finding_pkey" PRIMARY KEY ("id")
+    "suppressionExpiry" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Finding_nodeId_fkey" FOREIGN KEY ("nodeId") REFERENCES "Node" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "Finding_edgeId_fkey" FOREIGN KEY ("edgeId") REFERENCES "Edge" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "CanonicalMetric" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "aliases" TEXT,
     "description" TEXT,
@@ -73,15 +71,13 @@ CREATE TABLE "CanonicalMetric" (
     "owner" TEXT,
     "version" TEXT NOT NULL DEFAULT '1.0',
     "severityOnDrift" TEXT NOT NULL DEFAULT 'warning',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "CanonicalMetric_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "BuildRun" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "projectId" TEXT NOT NULL DEFAULT 'hungryhub-analytics',
     "status" TEXT NOT NULL DEFAULT 'success',
     "totalModels" INTEGER NOT NULL DEFAULT 0,
@@ -89,20 +85,18 @@ CREATE TABLE "BuildRun" (
     "totalCharts" INTEGER NOT NULL DEFAULT 0,
     "totalDashboards" INTEGER NOT NULL DEFAULT 0,
     "unresolvedCount" INTEGER NOT NULL DEFAULT 0,
-    "lineageCoverage" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "lineageCoverage" REAL NOT NULL DEFAULT 0,
     "errorFindings" INTEGER NOT NULL DEFAULT 0,
     "warningFindings" INTEGER NOT NULL DEFAULT 0,
     "criticalFindings" INTEGER NOT NULL DEFAULT 0,
     "infoFindings" INTEGER NOT NULL DEFAULT 0,
     "duration" INTEGER,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "BuildRun_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
 CREATE TABLE "Connector" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "category" TEXT NOT NULL DEFAULT 'olap',
@@ -116,16 +110,14 @@ CREATE TABLE "Connector" (
     "fileConfig" TEXT,
     "config" TEXT,
     "status" TEXT NOT NULL DEFAULT 'disconnected',
-    "lastSyncAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Connector_pkey" PRIMARY KEY ("id")
+    "lastSyncAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "DataSourceTable" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "connectorId" TEXT NOT NULL,
     "schema" TEXT,
     "name" TEXT NOT NULL,
@@ -134,15 +126,14 @@ CREATE TABLE "DataSourceTable" (
     "sizeBytes" INTEGER,
     "description" TEXT,
     "columns" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "DataSourceTable_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "DataSourceTable_connectorId_fkey" FOREIGN KEY ("connectorId") REFERENCES "Connector" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "Dashboard" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "layout" TEXT,
@@ -151,15 +142,13 @@ CREATE TABLE "Dashboard" (
     "status" TEXT NOT NULL DEFAULT 'draft',
     "branch" TEXT NOT NULL DEFAULT 'main',
     "ownerUserId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Dashboard_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "Dataset" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "type" TEXT NOT NULL DEFAULT 'virtual',
@@ -169,21 +158,20 @@ CREATE TABLE "Dataset" (
     "outputColumns" TEXT,
     "connectorId" TEXT,
     "schedule" TEXT,
-    "lastRunAt" TIMESTAMP(3),
+    "lastRunAt" DATETIME,
     "lastRunStatus" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "branch" TEXT NOT NULL DEFAULT 'main',
     "ownerUserId" TEXT,
     "dashboardId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Dataset_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Dataset_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "Chart" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "dashboardId" TEXT,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -197,15 +185,14 @@ CREATE TABLE "Chart" (
     "status" TEXT NOT NULL DEFAULT 'draft',
     "branch" TEXT NOT NULL DEFAULT 'main',
     "ownerUserId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Chart_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Chart_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "MetricDef" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "expression" TEXT,
@@ -220,15 +207,13 @@ CREATE TABLE "MetricDef" (
     "branch" TEXT NOT NULL DEFAULT 'main',
     "ownerUserId" TEXT,
     "version" INTEGER NOT NULL DEFAULT 1,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "MetricDef_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "MetricSource" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "metricId" TEXT NOT NULL,
     "tableId" TEXT,
     "connectorId" TEXT,
@@ -237,27 +222,26 @@ CREATE TABLE "MetricSource" (
     "columnName" TEXT,
     "role" TEXT NOT NULL,
     "expression" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "MetricSource_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "MetricSource_metricId_fkey" FOREIGN KEY ("metricId") REFERENCES "MetricDef" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "ChartMetric" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "chartId" TEXT NOT NULL,
     "metricId" TEXT NOT NULL,
     "alias" TEXT,
     "axis" TEXT,
     "color" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "ChartMetric_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ChartMetric_chartId_fkey" FOREIGN KEY ("chartId") REFERENCES "Chart" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "ChartMetric_metricId_fkey" FOREIGN KEY ("metricId") REFERENCES "MetricDef" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "Transform" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "type" TEXT NOT NULL,
@@ -266,80 +250,73 @@ CREATE TABLE "Transform" (
     "inputTables" TEXT,
     "outputSpec" TEXT,
     "schedule" TEXT,
-    "lastRunAt" TIMESTAMP(3),
+    "lastRunAt" DATETIME,
     "lastRunStatus" TEXT,
     "environment" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "branch" TEXT NOT NULL DEFAULT 'main',
     "ownerUserId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Transform_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "avatar" TEXT,
     "role" TEXT NOT NULL DEFAULT 'viewer',
     "color" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "Activity" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "entityType" TEXT NOT NULL,
     "entityId" TEXT NOT NULL,
     "action" TEXT NOT NULL,
     "details" TEXT,
     "dashboardId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Activity_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Activity_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "CollaborationSession" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "dashboardId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "cursorX" INTEGER NOT NULL DEFAULT 0,
     "cursorY" INTEGER NOT NULL DEFAULT 0,
     "activeChartId" TEXT,
     "status" TEXT NOT NULL DEFAULT 'active',
-    "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "CollaborationSession_pkey" PRIMARY KEY ("id")
+    "lastSeenAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
 CREATE TABLE "DashboardBranch" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "dashboardId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "baseBranch" TEXT NOT NULL DEFAULT 'main',
-    "baseCommitAt" TIMESTAMP(3),
+    "baseCommitAt" DATETIME,
     "status" TEXT NOT NULL DEFAULT 'active',
     "ownerUserId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "DashboardBranch_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "DashboardBranch_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "MergeRequest" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "dashboardId" TEXT NOT NULL,
     "sourceBranchId" TEXT NOT NULL,
     "targetBranch" TEXT NOT NULL DEFAULT 'main',
@@ -349,16 +326,15 @@ CREATE TABLE "MergeRequest" (
     "conflictDetails" TEXT,
     "ownerUserId" TEXT,
     "reviewerUserId" TEXT,
-    "mergedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "MergeRequest_pkey" PRIMARY KEY ("id")
+    "mergedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "MergeRequest_sourceBranchId_fkey" FOREIGN KEY ("sourceBranchId") REFERENCES "DashboardBranch" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "ApiLog" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "method" TEXT NOT NULL,
     "path" TEXT NOT NULL,
     "status" INTEGER NOT NULL,
@@ -369,9 +345,7 @@ CREATE TABLE "ApiLog" (
     "error" TEXT,
     "request" TEXT,
     "response" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "ApiLog_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateIndex
@@ -395,44 +369,3 @@ CREATE INDEX "ApiLog_status_idx" ON "ApiLog"("status");
 -- CreateIndex
 CREATE INDEX "ApiLog_createdAt_idx" ON "ApiLog"("createdAt");
 
--- AddForeignKey
-ALTER TABLE "Edge" ADD CONSTRAINT "Edge_sourceNodeId_fkey" FOREIGN KEY ("sourceNodeId") REFERENCES "Node"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Edge" ADD CONSTRAINT "Edge_targetNodeId_fkey" FOREIGN KEY ("targetNodeId") REFERENCES "Node"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Finding" ADD CONSTRAINT "Finding_nodeId_fkey" FOREIGN KEY ("nodeId") REFERENCES "Node"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Finding" ADD CONSTRAINT "Finding_edgeId_fkey" FOREIGN KEY ("edgeId") REFERENCES "Edge"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "DataSourceTable" ADD CONSTRAINT "DataSourceTable_connectorId_fkey" FOREIGN KEY ("connectorId") REFERENCES "Connector"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Dataset" ADD CONSTRAINT "Dataset_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Chart" ADD CONSTRAINT "Chart_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "MetricSource" ADD CONSTRAINT "MetricSource_metricId_fkey" FOREIGN KEY ("metricId") REFERENCES "MetricDef"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ChartMetric" ADD CONSTRAINT "ChartMetric_chartId_fkey" FOREIGN KEY ("chartId") REFERENCES "Chart"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ChartMetric" ADD CONSTRAINT "ChartMetric_metricId_fkey" FOREIGN KEY ("metricId") REFERENCES "MetricDef"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Activity" ADD CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Activity" ADD CONSTRAINT "Activity_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "DashboardBranch" ADD CONSTRAINT "DashboardBranch_dashboardId_fkey" FOREIGN KEY ("dashboardId") REFERENCES "Dashboard"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "MergeRequest" ADD CONSTRAINT "MergeRequest_sourceBranchId_fkey" FOREIGN KEY ("sourceBranchId") REFERENCES "DashboardBranch"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

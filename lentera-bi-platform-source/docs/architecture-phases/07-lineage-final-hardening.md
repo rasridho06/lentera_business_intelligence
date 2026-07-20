@@ -10,10 +10,22 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 7.0 - Governed asset graph
 
+Phase 4 prework: `'relationship'` was removed from `GOVERNED_ASSET_TYPES` (R5) until the Relationship model exists in this phase. Edge columns `assetType`, `assetId`, `sourceRevisionId` were added in R6 so 7.0a can backfill lineage edges without a second migration.
+
 - [ ] Define stable identifiers for file, physical table, virtual dataset, metric, relationship, chart, and dashboard assets.
 - [ ] Reuse the existing Node and Edge model; do not add a graph database.
 - [ ] Define empty graph, orphan edge, depth, node-limit, and dependency-confidence behavior.
 - [ ] Link every edge to the asset revision and extraction evidence that created it.
+- [ ] Add Relationship model (source/target table and column, cardinality, filter direction, active state, owner, validation status) and restore `'relationship'` to `GOVERNED_ASSET_TYPES`.
+
+### 7.0a - Lineage linkage retrofit
+
+Edge columns `assetType`, `assetId`, and `sourceRevisionId` were added in Phase 4 (remedial R6) so the Phase 7 lineage workflow can backfill semantic asset references without requiring a retroactive migration.
+
+- [ ] Populate `Edge.assetType` and `Edge.assetId` from revision create/update events — map the governed asset (connector, dataset, metric, chart, dashboard) to the edge's source and target nodes.
+- [ ] Link each Edge to the `AssetRevision` that produced it via `sourceRevisionId` so lineage traversal can walk from a governance event to every affected edge.
+- [ ] Migrate legacy lineage-only Edges (dbt / Superset imports) — leave `assetType` nullable for existing rows; populate as Phase 7.2 contracts+lineage processing links source schemas to revisions.
+- [ ] Use the index on `(assetType, assetId)` for impact-traversal queries that begin from a governed asset and walk through edges to discover downstream breakage.
 
 ## 7.1 - Relationship manager
 
@@ -25,7 +37,8 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 7.2 - Contracts, lineage, and impact
 
-- [ ] Create lineage from source file/connector through table, virtual dataset, metric, chart, and dashboard.
+- [ ] Create lineage from source file/connector through table, SQL/Python virtual dataset, metric, chart, and dashboard.
+- [ ] Link scheduler job definitions and job runs to the Python/SQL output revision that they produced.
 - [ ] Run contract checks when a source schema, SQL definition, metric, or relationship changes.
 - [ ] Identify downstream breakage: missing column, incompatible type, metric failure, dashboard query failure, or changed join cardinality.
 - [ ] Traverse downstream impact with visited set, depth limit, and result-node limit.
@@ -33,7 +46,7 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 7.3 - Change intelligence and repair suggestions
 
-- [ ] Display an append-only timeline with actor, time, reason, revision, before/after diff, validation outcome, and impacted assets.
+- [ ] Display an append-only timeline with actor, time, reason, revision, before/after diff, validation outcome, job-run status, and impacted assets.
 - [ ] Support draft, review, publish, reject, restore, and rollback-as-new-revision states.
 - [ ] Before publish, simulate impacted virtual datasets, metrics, charts, and dashboards against the proposed revision.
 - [ ] For a missing or renamed column, suggest replacement candidates using compatible type, normalized name, source lineage, and schema profile.
@@ -73,6 +86,7 @@ Run this gate after every subphase that can affect runtime or user-visible behav
 - [ ] A breaking change identifies every impacted downstream asset and explains the failure.
 - [ ] Repair suggestions are reviewable and never silently alter SQL.
 - [ ] Tests and build pass without PostgreSQL, Redis, workers, or a microservice requirement.
+- [x] Edge lineage linkage columns (`assetType`, `assetId`, `sourceRevisionId`) added by Phase 4 R6. (7.0a)
 
 ## Review focus
 

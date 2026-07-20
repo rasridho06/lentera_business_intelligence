@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -45,6 +45,11 @@ model Edge {
   extractionMethod String?
   evidence         String?  // JSON string
   metadata         String?  // JSON string
+  // Phase 7.0a lineage linkage — populated when an AssetRevision creates/updates this edge.
+  // Nullable because legacy lineage-only edges (dbt/Superset imports) are not yet linked.
+  assetType        String?
+  assetId          String?
+  sourceRevisionId String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -52,6 +57,8 @@ model Edge {
   targetNode       Node     @relation("TargetNodes", fields: [targetNodeId], references: [id], onDelete: Cascade)
 
   findings         Finding[]
+
+  @@index([assetType, assetId])
 }
 
 model Finding {
@@ -381,6 +388,82 @@ model MergeRequest {
 // OBSERVABILITY MODELS
 // ═══════════════════════════════════════════
 
+model AuditEvent {
+  id            String          @id @default(cuid())
+  correlationId String          @unique
+  actorId       String?
+  action        String
+  reason        String?
+  createdAt     DateTime        @default(now())
+
+  revisions     AssetRevision[]
+  jobRuns       JobRun[]
+}
+
+model AssetRevision {
+  id           String   @id @default(cuid())
+  assetType    String
+  assetId      String
+  revision     Int
+  actorId      String?
+  action       String
+  reason       String?
+  beforeJson   String?
+  afterJson    String
+  contentHash  String
+  auditEventId String
+  createdAt    DateTime @default(now())
+
+  auditEvent   AuditEvent @relation(fields: [auditEventId], references: [id], onDelete: Restrict)
+  jobRuns      JobRun[]   @relation("JobRunOutputRevision")
+
+  @@unique([assetType, assetId, revision])
+  @@index([assetType, assetId])
+  @@index([auditEventId])
+}
+
+model JobDefinition {
+  id                  String   @id @default(cuid())
+  assetType           String
+  assetId             String
+  schedule            String
+  timezone            String   @default("UTC")
+  enabled             Boolean  @default(false)
+  retryLimit          Int      @default(0)
+  // Phase 6.4 scheduler needs: lockKey + lockedAt (per-job lock), consecutiveFailures (circuit breaker), missedRunPolicy (skip | catch_up | fail).
+  lockKey             String?
+  lockedAt            DateTime?
+  consecutiveFailures Int      @default(0)
+  missedRunPolicy     String?  // skip, catch_up, fail
+  lastRunAt           DateTime?
+  nextRunAt           DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  runs                JobRun[]
+
+  @@unique([assetType, assetId])
+  @@index([enabled, nextRunAt, lockKey])
+}
+
+model JobRun {
+  id               String         @id @default(cuid())
+  jobId            String
+  status           String
+  attempt          Int            @default(1)
+  startedAt        DateTime       @default(now())
+  finishedAt       DateTime?
+  errorSummary     String?
+  outputRevisionId String?
+  auditEventId     String?
+
+  job              JobDefinition  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  outputRevision   AssetRevision? @relation("JobRunOutputRevision", fields: [outputRevisionId], references: [id], onDelete: SetNull)
+  auditEvent       AuditEvent?    @relation(fields: [auditEventId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, startedAt])
+  @@index([status, startedAt])
+}
 model ApiLog {
   id         String   @id @default(cuid())
   method     String   // GET, POST, PUT, DELETE

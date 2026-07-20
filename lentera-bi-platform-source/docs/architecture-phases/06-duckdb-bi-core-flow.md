@@ -10,6 +10,13 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 6.0 - Upload boundary
 
+Phase 4 and Phase 5 provide the foundation this phase extends:
+
+- **Scheduler schema already ready** — Phase 4 R4 added `lockKey`, `lockedAt`, `consecutiveFailures`, and `missedRunPolicy` to `JobDefinition`. The Phase 6.4 scheduler runner can lock and claim the next runnable job with a single indexed scan on `(enabled, nextRunAt, lockKey)` without a separate migration.
+- **Preview sandbox coexistence** — The Phase 5a server-side query contract and the Phase 5.0 browser `sql.js` sandbox both accept CSV input. Clarify the boundary:
+  - Browser sandbox: ad-hoc preview, in-memory, no credentials, bounded to 10 000 rows / 5 MB. Not publishable.
+  - DuckDB ingestion (this phase): server-side, produces a versioned `DataSourceTable` asset with schema hash, linked to a `source-file` revision. The result flows through the Phase 5b virtual dataset pipeline and into charts/dashboards.
+
 - [ ] Support CSV, XLSX, and Parquet through one server-side upload contract.
 - [ ] Enforce file size, file count, MIME/signature, extension, row, and disk-lifetime limits.
 - [ ] Store uploads under generated IDs in a Git-ignored directory; never trust a client filename or path.
@@ -24,7 +31,7 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 6.2 - Dataset and semantic authoring
 
-- [ ] Create virtual SQL datasets from physical tables and existing virtual datasets.
+- [ ] Create virtual SQL or Python datasets from physical tables and existing virtual datasets.
 - [ ] Persist dimensions, metrics, filters, display names, descriptions, owners, and contracts.
 - [ ] Validate a virtual dataset against its source schema before publish.
 - [ ] Reuse Phase 5 query validation and dependency capture; do not create a second query path.
@@ -36,17 +43,26 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [ ] Add charts to dashboards and persist layout, filters, and dataset revision references.
 - [ ] Reload and verify chart/dashboard behavior from persisted definitions.
 
-## 6.4 - End-to-end verification
+## 6.4 - Scheduled refresh
 
+- [ ] Persist cron expression, timezone, enabled state, retry policy, and next-run time for SQL/Python dataset jobs.
+- [ ] Run one scheduler process that reads active jobs from SQLite, applies a per-job lock, and records every run.
+- [ ] Create a new output revision on success; preserve the previous output and record structured failure on error.
 - [ ] Run CSV, XLSX, and Parquet import-to-table smoke tests.
 - [ ] Run physical table-to-virtual dataset-to-chart-to-dashboard reload smoke tests.
 - [ ] Test invalid extension/signature, size limit, malformed file, query error, and cleanup.
 - [ ] Verify uploaded files, connector secrets, and raw result sets never enter browser responses.
 
-## 6.5 - Handoff and review
+## 6.5 - End-to-end verification
 
-- [ ] Run full tests, production build, and all three import paths.
-- [ ] Review upload lifecycle, DuckDB boundary, query callers, revision events, chart definitions, and dashboard persistence.
+- [ ] Run full tests, production build, all three import paths, and one scheduled SQL/Python refresh.
+- [ ] Review upload lifecycle, DuckDB boundary, query callers, revision events, scheduler locks/retries, chart definitions, and dashboard persistence.
+- [ ] Fix Critical/High before merge and Medium in this PR.
+- [ ] After merge, checkout `main`, pull `main`, and create the next phase branch.
+
+## 6.6 - Handoff and review
+
+- [ ] Review the complete Phase 6 implementation and prepare the PR handoff.
 - [ ] Fix Critical/High before merge and Medium in this PR.
 - [ ] After merge, checkout `main`, pull `main`, and create the next phase branch.
 
