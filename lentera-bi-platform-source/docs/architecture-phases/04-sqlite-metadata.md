@@ -32,12 +32,25 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [x] Store Python/SQL job definitions, schedule expression, timezone, enabled state, and last-run pointer as metadata only.
 - [x] Store append-only job-run metadata: status, start/end time, error summary, output revision ID, and audit correlation ID.
 
-## 4.3 - Semantic metadata foundation
+## 4.3 - Semantic metadata foundation (rescoped to Phase 7)
 
-- [ ] Persist dataset schema snapshots and schema hashes.
-- [ ] Persist metric definitions, ownership, certification state, and freshness/SLA metadata.
-- [ ] Add relationship definition storage: source/target table and column, cardinality, filter direction, active state, and validation status.
-- [ ] Use stable IDs, unique constraints, foreign keys, and explicit cascade rules.
+Phase 4.3 originally included the Relationship model, dataset schema snapshots, metric ownership/certification, and relationship storage. Those have been rescoped to Phase 7 (governance) because:
+
+- Relationship validation is tightly coupled with lineage traversal (Phase 7.0–7.1).
+- Metric certification and freshness/SLA metadata are part of the trust UX (Phase 7.4).
+- The Semantic metadata storage would be a dead bridge between Phase 4 and Phase 7 without the lineage linkage that 7.0 provides.
+
+Phase 4 deliverables that directly support this rescoping:
+
+- [x] Edge columns `assetType`, `assetId`, `sourceRevisionId` added (remedial R6) so Phase 7.0a can populate lineage edges with semantic asset references.
+- [x] `'relationship'` removed from GOVERNED_ASSET_TYPES until the Relationship model exists (remedial R5).
+- [x] Scheduler fields (`lockKey`, `lockedAt`, `consecutiveFailures`, `missedRunPolicy`) added to JobDefinition so Phase 6.4 can implement a SQLite-backed scheduler without a second migration (remedial R4).
+
+Deferred to Phase 7:
+
+- [ ] Relationship model: source/target table and column, cardinality, filter direction, active state, owner, validation status — Phase 7.0–7.1
+- [ ] Dataset schema snapshots and schema hashes — Phase 7.2
+- [ ] Metric ownership, certification state, freshness/SLA metadata — Phase 7.4
 
 ## 4.4 - Seed and verification
 

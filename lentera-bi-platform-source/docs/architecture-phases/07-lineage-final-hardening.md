@@ -15,6 +15,15 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 - [ ] Define empty graph, orphan edge, depth, node-limit, and dependency-confidence behavior.
 - [ ] Link every edge to the asset revision and extraction evidence that created it.
 
+### 7.0a - Lineage linkage retrofit
+
+Edge columns `assetType`, `assetId`, and `sourceRevisionId` were added in Phase 4 (remedial R6) so the Phase 7 lineage workflow can backfill semantic asset references without requiring a retroactive migration.
+
+- [ ] Populate `Edge.assetType` and `Edge.assetId` from revision create/update events — map the governed asset (connector, dataset, metric, chart, dashboard) to the edge's source and target nodes.
+- [ ] Link each Edge to the `AssetRevision` that produced it via `sourceRevisionId` so lineage traversal can walk from a governance event to every affected edge.
+- [ ] Migrate legacy lineage-only Edges (dbt / Superset imports) — leave `assetType` nullable for existing rows; populate as Phase 7.2 contracts+lineage processing links source schemas to revisions.
+- [ ] Use the index on `(assetType, assetId)` for impact-traversal queries that begin from a governed asset and walk through edges to discover downstream breakage.
+
 ## 7.1 - Relationship manager
 
 - [ ] Create and edit relationships between table columns with cardinality, filter direction, active state, and owner.
