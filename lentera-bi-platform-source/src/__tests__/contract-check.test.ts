@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { db } from '@/lib/db';
 import { checkContracts, type ColumnContract } from '@/lib/query/contract-check';
-import { appendAssetRevision } from '@/lib/revisions';
 
 describe('dataset contracts', () => {
   let datasetId: string;
@@ -32,7 +31,7 @@ describe('dataset contracts', () => {
   afterAll(async () => {
     await db.datasetContract.deleteMany({ where: { datasetId } });
     await db.assetRevision.deleteMany({ where: { assetId: datasetId } });
-    await db.auditEvent.deleteMany();
+    await db.auditEvent.deleteMany({ where: { revisions: { some: { assetId: datasetId } } } });
     await db.dataset.delete({ where: { id: datasetId } }).catch(() => {});
     await db.dataSourceTable.deleteMany({ where: { connectorId } });
     await db.connector.delete({ where: { id: connectorId } }).catch(() => {});
@@ -87,6 +86,25 @@ describe('dataset contracts', () => {
     });
 
     expect(result.violations.some((v) => v.rule === 'incompatible_type')).toBe(true);
+  });
+
+  it('detects nullability violation', async () => {
+    const columns: ColumnContract[] = [{ name: 'email', type: 'String', nullable: false }];
+    await db.datasetContract.upsert({
+      where: { datasetId },
+      create: { datasetId, columns: JSON.stringify(columns) },
+      update: { columns: JSON.stringify(columns) },
+    });
+
+    const result = await checkContracts(datasetId, {
+      rows: [{ email: 'alice@test.com' }, { email: null }],
+      columns: [{ name: 'email', type: 'Nullable(String)' }],
+      rowCount: 2,
+      truncated: false,
+      elapsedMs: 0,
+    });
+
+    expect(result.violations.some((v) => v.rule === 'nullability')).toBe(true);
   });
 
   it('detects uniqueness violation', async () => {
@@ -179,3 +197,4 @@ describe('dataset contracts', () => {
     expect(revision).not.toBeNull();
   });
 });
+

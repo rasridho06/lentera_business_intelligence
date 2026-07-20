@@ -41,7 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           port: connector.port!,
           database: connector.database!,
           username: connector.username!,
-          password: connector.password!,
+          password: connector.password ?? '',
         },
         timeout: 15_000,
         maxRows: 50,

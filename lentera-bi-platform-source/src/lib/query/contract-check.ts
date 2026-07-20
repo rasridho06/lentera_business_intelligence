@@ -1,4 +1,4 @@
-import type { QueryColumn, QueryResponse } from './contract';
+import type { QueryResponse } from './contract';
 import { db } from '@/lib/db';
 import { appendAssetRevision } from '@/lib/revisions';
 
@@ -6,7 +6,9 @@ export interface ColumnContract {
   name: string;
   type: string;
   nullable?: boolean;
-  unique?: boolean;
+  unique?: boolean;  // ponytail: best-effort on the preview sample (≤50 rows), not the full dataset
+  // ponytail: acceptedValues[] per-column is the canonical source;
+  // the DatasetContract.acceptedValues top-level JSON field is read in checkContracts.
   acceptedValues?: string[];
   description?: string;
 }
@@ -41,6 +43,8 @@ export async function checkContracts(
   const acceptedValues: Record<string, string[]> = contract.acceptedValues ? JSON.parse(contract.acceptedValues as string) : {};
   const violations: ContractViolation[] = [];
 
+  // ponytail: freshnessSeconds (Phase 6) — reserved schema field, not enforced yet.
+  // Phase 6 scheduled refresh will compare connector.lastSyncAt vs Date.now().
   const responseColMap = new Map(response.columns.map((c) => [c.name.toLowerCase(), c]));
 
   for (const col of columns) {
@@ -67,6 +71,15 @@ export async function checkContracts(
       });
     }
 
+    if (col.nullable === false && response.rows.some((r) => r[col.name] === null)) {
+      violations.push({
+        column: col.name,
+        rule: 'nullability',
+        expected: 'NOT NULL',
+        actual: 'contains null',
+      });
+    }
+
     if (col.unique && response.rows.length > 0) {
       const values = response.rows.map((r) => String(r[col.name] ?? ''));
       const unique = new Set(values);
@@ -74,7 +87,7 @@ export async function checkContracts(
         violations.push({
           column: col.name,
           rule: 'uniqueness',
-          expected: 'all values unique',
+          expected: 'sample values unique',
           actual: `${values.length - unique.size} duplicate(s)`,
         });
       }
@@ -98,7 +111,6 @@ export async function checkContracts(
 
   const passed = violations.length === 0;
 
-  // Persist validation outcome as an audit-linked revision.
   await appendAssetRevision({
     assetType: 'dataset',
     assetId: datasetId,
@@ -108,3 +120,4 @@ export async function checkContracts(
 
   return { passed, violations, checkedAt: new Date().toISOString() };
 }
+

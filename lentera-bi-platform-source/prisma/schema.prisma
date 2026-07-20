@@ -514,9 +514,9 @@ model DatasetDependency {
 model DatasetContract {
   id               String   @id @default(cuid())
   datasetId        String   @unique
-  columns          String   // JSON array: [{name, type, nullable, unique, acceptedValues[]?, description?}]
-  freshnessSeconds Int?     // max age in seconds before data is considered stale
-  acceptedValues   String?  // JSON record: {columnName: [allowed values]}
+  columns          String   // JSON array of ColumnContract: [{name, type, nullable?, unique?, description?}]
+  freshnessSeconds Int?     // Phase 6 reserved — max age before data is stale (not enforced yet)
+  acceptedValues   String?  // JSON record: {columnName: [allowed values]} — canonical source for accepted-values checks
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

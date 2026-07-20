@@ -14,3 +14,4 @@ CREATE TABLE "DatasetContract" (
 );
 
 CREATE UNIQUE INDEX "DatasetContract_datasetId_key" ON "DatasetContract"("datasetId");
+
