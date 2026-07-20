@@ -206,6 +206,7 @@ model Dataset {
   dashboard     Dashboard? @relation(fields: [dashboardId], references: [id])
   dependencies  DatasetDependency[]
   dependentOf   DatasetDependency[] @relation("DependentDataset")
+  contracts     DatasetContract[]
 }
 
 // --- Chart ---
@@ -504,4 +505,20 @@ model DatasetDependency {
 
   @@index([datasetId])
   @@index([dependsOnDatasetId])
+}
+
+// ═══════════════════════════════════════════
+// SEMANTIC CONTRACTS (Phase 5c)
+// ═══════════════════════════════════════════
+
+model DatasetContract {
+  id               String   @id @default(cuid())
+  datasetId        String   @unique
+  columns          String   // JSON array: [{name, type, nullable, unique, acceptedValues[]?, description?}]
+  freshnessSeconds Int?     // max age in seconds before data is considered stale
+  acceptedValues   String?  // JSON record: {columnName: [allowed values]}
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  dataset          Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 }
