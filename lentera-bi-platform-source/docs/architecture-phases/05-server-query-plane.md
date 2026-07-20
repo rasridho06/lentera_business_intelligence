@@ -10,10 +10,10 @@ One large phase equals one dedicated branch. After merge, checkout `main`, pull 
 
 ## 5.0 - Query boundary
 
-- [ ] Inventory every browser-side SQL or database call.
-- [ ] Define a single authenticated server execution contract for SQL and Python with timeout, memory/row/byte limits, and structured error responses.
-- [ ] Reject non-read-only SQL for preview and virtual dataset execution.
-- [ ] Keep database credentials, Python runtime access, and full result sets on the server.
+- [x] Inventory every browser-side SQL or database call.
+- [x] Define a single authenticated server execution contract for SQL and Python with timeout, memory/row/byte limits, and structured error responses.
+- [x] Reject non-read-only SQL for preview and virtual dataset execution.
+- [x] Keep database credentials, Python runtime access, and full result sets on the server.
 
 ### Phase 4 foundation
 
@@ -28,9 +28,18 @@ The query plane relies on the Phase 4 SQLite metadata store (`lentera.db`) and i
 
 Phase 5 is split into three manageable PRs to keep each diff reviewable:
 
-- **5a — Read-only SQL contract + ClickHouse adapter** (subphases 5.0 + 5.1): authenticated server query contract, allowlisted connector IDs, server-side credentials, identifier quoting, bounded JSON rows, timeout/row/byte limits, structured error responses.
+- **5a — Read-only SQL contract + ClickHouse adapter** (subphases 5.0 + 5.1): ✅ done — authenticated server query contract, allowlisted connector IDs, server-side credentials, identifier quoting, bounded JSON rows, timeout/row/byte limits, structured error responses.
 - **5b — Virtual SQL/Python datasets** (subphase 5.2): persist dataset code + language + dependencies + schema snapshot + owner + revision ID, validate SQL before save, cycle detection, revalidation on upstream schema change, dependency precision labeling.
 - **5c — Contracts and preview** (subphase 5.3): column existence/type/nullability/uniqueness/freshness contracts, bounded preview + contract check before publish, machine-readable structured failures, audit-linked revision on validation outcome.
+
+### 5a implementation record
+
+- `src/lib/query/contract.ts` — shared types: `QueryRequest`, `QueryResponse`, `QueryError` with 12 machine-readable error codes. Hard defaults: timeout 30s (max 60s), rows 1k (max 10k), bytes 1MB (max 10MB).
+- `src/lib/query/sql-validator.ts` — keyword-based read-only gate (SELECT/WITH/EXPLAIN/DESCRIBE/SHOW only), table reference extraction from FROM/JOIN, allowlist enforcement. Upgrade path comment for sqlglot if column-precise lineage is needed.
+- `src/lib/query/clickhouse.ts` — ClickHouse HTTP adapter (port 8123 native interface, no client library dep). Basic Auth, TabSeparatedWithNamesAndTypes format, AbortController timeout.
+- `src/app/api/query/execute/route.ts` — POST /api/query/execute. Resolves connector from SQLite metadata, builds table allowlist from DataSourceTable rows, validates SQL, executes through adapter, returns bounded response.
+- `src/__tests__/query-execute.test.ts` — 25 tests covering SQL validator + route handler (missing fields, unknown connector, non-read-only, table not in allowlist, limit clamping). 169/169 total tests pass with zero regressions.
+- Branch: `codex/phase-5a-query-contract`
 
 ### Browser preview sandbox (sql.js carve-out)
 
@@ -45,10 +54,10 @@ The `/query` route hosts a browser-only SQLite preview sandbox via `sql.js`. The
 
 ## 5.1 - Source adapters
 
-- [ ] Add a ClickHouse adapter behind the server contract.
-- [ ] Use allowlisted connector IDs and server-side stored credentials only.
-- [ ] Quote identifiers and bind values; reject unknown tables and columns.
-- [ ] Return bounded JSON rows plus schema and query diagnostics.
+- [x] Add a ClickHouse adapter behind the server contract.
+- [x] Use allowlisted connector IDs and server-side stored credentials only.
+- [x] Quote identifiers and bind values; reject unknown tables and columns.
+- [x] Return bounded JSON rows plus schema and query diagnostics.
 
 ## 5.2 - Virtual SQL datasets
 
