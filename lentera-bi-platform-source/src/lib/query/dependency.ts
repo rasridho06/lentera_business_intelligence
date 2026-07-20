@@ -126,6 +126,49 @@ export interface ValidateResult {
   dependencies?: ResolvedDependency[];
 }
 
+// ponytail: in-memory cycle check — avoids writing temp edges to DB.
+// Builds an adjacency graph from ALL existing dataset→dataset deps,
+// injects the proposed new edges, then walks from each new target up
+// through the graph to see if we loop back to the dataset being validated.
+async function wouldCreateCycle(
+  datasetId: string,
+  newTargets: string[],
+): Promise<boolean> {
+  if (newTargets.length === 0) return false;
+
+  const rows = await db.datasetDependency.findMany({
+    where: { dependsOnDatasetId: { not: null } },
+    select: { datasetId: true, dependsOnDatasetId: true },
+  });
+
+  const graph = new Map<string, Set<string>>();
+  for (const { datasetId: src, dependsOnDatasetId: tgt } of rows) {
+    if (!tgt) continue;
+    if (!graph.has(src)) graph.set(src, new Set());
+    graph.get(src)!.add(tgt);
+  }
+
+  // Inject the proposed edges.
+  if (!graph.has(datasetId)) graph.set(datasetId, new Set());
+  for (const t of newTargets) graph.get(datasetId)!.add(t);
+
+  // Walk from each new target toward datasetId.
+  for (const start of newTargets) {
+    const visited = new Set<string>();
+    const queue = [start];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === datasetId) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      const neighbors = graph.get(current);
+      if (neighbors) for (const n of neighbors) queue.push(n);
+    }
+  }
+
+  return false;
+}
+
 export async function validateVirtualDataset(params: {
   sql: string;
   language: string;
@@ -144,19 +187,14 @@ export async function validateVirtualDataset(params: {
   const deps = await resolveDependencies(sql, connectorId, datasetId);
 
   if (datasetId) {
-    // Check for cycles BEFORE replacing deps — only eval new dataset→dataset edges.
-    const newDatasetDeps = deps.filter((d) => d.dependsOnDatasetId);
+    const newDatasetDeps = deps.filter((d) => d.dependsOnDatasetId).map((d) => d.dependsOnDatasetId!);
     if (newDatasetDeps.length > 0) {
-      // Temporarily write ONLY the new dataset→dataset edges to check.
-      await replaceDependencies(datasetId, newDatasetDeps);
-      const cycle = await detectCycles(datasetId);
-      // Roll back.
-      await replaceDependencies(datasetId, []);
-      if (cycle) {
+      const cycled = await wouldCreateCycle(datasetId, newDatasetDeps);
+      if (cycled) {
         return {
           valid: false,
           errorCode: 'CIRCULAR_DEPENDENCY',
-          error: `Circular dependency detected: ${cycle.join(' → ')}`,
+          error: `Circular dependency detected: dataset refers upstream to itself.`,
         };
       }
     }

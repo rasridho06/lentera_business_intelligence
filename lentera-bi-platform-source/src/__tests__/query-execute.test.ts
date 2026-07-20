@@ -95,6 +95,7 @@ describe('POST /api/query/execute', () => {
 
   afterAll(async () => {
     if (connectorId) {
+      await db.dataSourceTable.deleteMany({ where: { connectorId } }).catch(() => {});
       await db.connector.delete({ where: { id: connectorId } }).catch(() => {});
     }
   });

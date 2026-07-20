@@ -1,4 +1,5 @@
-// ponytail: ClickHouse native HTTP interface (port 8123) — no client library dep.
+// ponytail: ClickHouse native HTTP interface — no client library dep.
+// Default port 8123 (HTTP, no TLS). Set useTls=true for port 8443 (HTTPS).
 // Upgrade path: @clickhouse/client if connection pooling or native protocol is needed.
 
 import type { QueryColumn, QueryResponse } from './contract';
@@ -9,6 +10,8 @@ interface ClickHouseConnector {
   database: string;
   username: string;
   password: string;
+  /** Use HTTPS (port 8443) instead of HTTP (port 8123). Default: false. */
+  useTls?: boolean;
 }
 
 interface ExecuteOptions {
@@ -20,8 +23,10 @@ interface ExecuteOptions {
 }
 
 function buildUrl(connector: ClickHouseConnector): string {
-  const { host, port, database } = connector;
-  return `http://${host}:${port || 8123}/?database=${encodeURIComponent(database)}`;
+  const { host, port, database, useTls } = connector;
+  const scheme = useTls ? 'https' : 'http';
+  const p = port || (useTls ? 8443 : 8123);
+  return `${scheme}://${host}:${p}/?database=${encodeURIComponent(database)}`;
 }
 
 function buildAuthHeader(connector: ClickHouseConnector): string {
@@ -31,10 +36,6 @@ function buildAuthHeader(connector: ClickHouseConnector): string {
 function parseTSV(tsv: string): { columns: QueryColumn[]; rows: unknown[][] } {
   const lines = tsv.trim().split('\n');
   if (lines.length === 0) return { columns: [], rows: [] };
-  // ClickHouse TSV with names: first line = column names, second line = types, rest = data.
-  // Without names: just data rows.
-  // We request FORMAT TabSeparatedWithNamesAndTypes for full schema.
-  // But TabSeparatedWithNamesAndTypes emits: header1\t...\n type1\t...\n data...
   const headers = lines[0].split('\t');
   const types = lines.length > 1 ? lines[1].split('\t') : [];
   const dataRows = lines.slice(2).map((line) => line.split('\t'));
