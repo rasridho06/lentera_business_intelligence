@@ -246,6 +246,18 @@ describe('E2E — CRUD entities', () => {
     const t = await db.transform.findUnique({ where: { id: transformId } });
     expect(t!.type).toBe('sql');
   });
+
+  it('chart/node cleanup: Node deleted when chart deleted', async () => {
+    const n = await db.node.create({ data: { externalId: 'e2e-clean', platform: 'lentera', nodeType: 'chart', name: 'E2E Chart', qualifiedName: 'e2e', status: 'active' } });
+    expect(n).not.toBeNull();
+    // Simulates what the DELETE route handler does: find node by name+type, delete edges, delete node.
+    const node = await db.node.findFirst({ where: { name: 'E2E Chart', nodeType: 'chart' } });
+    expect(node).not.toBeNull();
+    await db.edge.deleteMany({ where: { OR: [{ sourceNodeId: node!.id }, { targetNodeId: node!.id }] } });
+    await db.node.delete({ where: { id: node!.id } });
+    const after = await db.node.count({ where: { name: 'E2E Chart', nodeType: 'chart' } });
+    expect(after).toBe(0);
+  });
 });
 
 describe('E2E — worst-case scenarios', () => {

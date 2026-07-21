@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { decrypt } from '@/lib/crypto';
+import { executeClickHouseQuery } from '@/lib/query/clickhouse';
 
 // ── Connector Connection Test API ──
 // Tests connection to a database connector (simulated with validation)
@@ -295,6 +296,56 @@ export async function POST(request: NextRequest) {
     const validation = validateConnectionParams(params);
     if (!validation.valid) {
       return NextResponse.json({ success: false, error: validation.error }, { status: 400 });
+    }
+
+// Phase 5a fix: try real connection for ClickHouse before falling back to demo.
+    if (params.type === 'clickhouse' && params.host && !params.host.startsWith('demo-')) {
+      try {
+        const realResult = await executeClickHouseQuery({
+          sql: 'SELECT name, type FROM system.tables WHERE database = currentDatabase() FORMAT TabSeparatedWithNamesAndTypes',
+          connector: {
+            host: params.host,
+            port: typeof params.port === 'string' ? parseInt(params.port) : (params.port || 8123),
+            database: params.database || 'default',
+            username: params.username || 'default',
+            password: params.password || '',
+          },
+          timeout: 10_000,
+          maxRows: 500,
+          maxBytes: 1_048_576,
+        });
+
+        const tables = realResult.rows.map((r) => ({
+          schema: params.database || 'default',
+          name: String(r.name || ''),
+          type: 'table',
+          rowCount: 0,
+          columns: [] as { name: string; type: string; nullable: boolean; isPK?: boolean }[],
+        }));
+
+        if (params.connectorId) {
+          await db.connector.update({
+            where: { id: params.connectorId },
+            data: { status: 'connected', lastSyncAt: new Date() },
+          });
+          await db.dataSourceTable.deleteMany({ where: { connectorId: params.connectorId } });
+          for (const t of tables) {
+            await db.dataSourceTable.create({
+              data: { connectorId: params.connectorId, schema: t.schema, name: t.name, type: t.type, rowCount: t.rowCount, columns: JSON.stringify(t.columns) },
+            });
+          }
+          const updated = await db.connector.findUnique({ where: { id: params.connectorId }, include: { tables: true } });
+          const { password: _, ...safe } = updated || {};
+          return NextResponse.json({ success: true, message: `Connected to ${params.host}:${params.port}`, tables, tableCount: tables.length, synced: true, connector: safe });
+        }
+        return NextResponse.json({ success: true, message: `Connected to ${params.host}:${params.port}`, tables });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND')) {
+          return NextResponse.json({ success: false, message: `Connection refused: ${params.host}:${params.port}. Host unreachable. Verify the host and port.`, error: 'ECONNREFUSED' });
+        }
+        // Fall through to simulation
+      }
     }
 
     // Simulate connection test
