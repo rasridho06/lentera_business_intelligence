@@ -522,3 +522,26 @@ model DatasetContract {
 
   dataset          Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 }
+
+// ═══════════════════════════════════════════
+// RELATIONSHIP MANAGER (Phase 7)
+// ═══════════════════════════════════════════
+
+model Relationship {
+  id               String   @id @default(cuid())
+  sourceTableId    String
+  targetTableId    String
+  sourceColumn     String
+  targetColumn     String
+  cardinality      String   @default("many_to_one") // one_to_one | one_to_many | many_to_one | many_to_many
+  filterDirection  String   @default("both")        // source_to_target | target_to_source | both
+  isActive         Boolean  @default(true)
+  validationStatus String   @default("unchecked")   // unchecked | valid | invalid | approved
+  ownerUserId      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([sourceTableId, targetTableId, sourceColumn, targetColumn])
+  @@index([sourceTableId])
+  @@index([targetTableId])
+}
