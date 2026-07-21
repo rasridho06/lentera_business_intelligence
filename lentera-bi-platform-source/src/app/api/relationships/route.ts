@@ -34,11 +34,55 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, cardinality, filterDirection, isActive, validationStatus } = body;
+    if (!id) return NextResponse.json({ error: 'id is required.' }, { status: 400 });
+
+    const before = await db.relationship.findUnique({ where: { id }, select: { cardinality: true, isActive: true, validationStatus: true } });
+    if (!before) return NextResponse.json({ error: 'Relationship not found.' }, { status: 404 });
+
+    const rel = await db.relationship.update({
+      where: { id },
+      data: {
+        ...(cardinality !== undefined ? { cardinality } : {}),
+        ...(filterDirection !== undefined ? { filterDirection } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+        ...(validationStatus !== undefined ? { validationStatus } : {}),
+      },
+    });
+
+    await appendAssetRevision({
+      assetType: 'relationship',
+      assetId: id,
+      action: 'update',
+      before: { cardinality: before.cardinality, isActive: before.isActive, validationStatus: before.validationStatus },
+      after: { cardinality: rel.cardinality, isActive: rel.isActive, validationStatus: rel.validationStatus },
+    });
+
+    return NextResponse.json(rel);
+  } catch (err) {
+    return NextResponse.json({ error: 'Failed to update relationship' }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
   try {
+    const rel = await db.relationship.findUnique({ where: { id }, select: { sourceTableId: true, targetTableId: true } });
     await db.relationship.delete({ where: { id } });
+    if (rel) {
+      await appendAssetRevision({
+        assetType: 'relationship',
+        assetId: id,
+        action: 'delete',
+        reason: 'Relationship deleted via API',
+        before: { sourceTableId: rel.sourceTableId, targetTableId: rel.targetTableId },
+        after: null,
+      });
+    }
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: 'Failed to delete relationship' }, { status: 500 });
