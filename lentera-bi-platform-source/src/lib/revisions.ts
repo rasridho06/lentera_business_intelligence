@@ -2,10 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 
-// ponytail: 'relationship' deferred to Phase 7.0 governance — Relationship model
-// does not exist yet in the schema. Add it back when Phase 7.0 lands.
 export const GOVERNED_ASSET_TYPES = [
-  'connector', 'table', 'dataset', 'metric', 'chart', 'dashboard',
+  'connector', 'table', 'dataset', 'metric', 'relationship', 'chart', 'dashboard',
 ] as const;
 
 type Snapshot = Record<string, unknown> | null;
