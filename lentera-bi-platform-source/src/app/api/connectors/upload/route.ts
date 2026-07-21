@@ -15,7 +15,6 @@ const ALLOWED_EXT: Record<string, SupportedFormat> = {
 const ALLOWED_MIME: Record<string, SupportedFormat> = {
   'text/csv': 'csv', 'text/tab-separated-values': 'tsv',
   'application/json': 'json',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'csv',
 };
 
 function detectFormat(filename: string, mimeType: string): SupportedFormat | null {
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const format = detectFormat(file.name, file.type);
     if (!format) {
-      return NextResponse.json({ error: `Unsupported file type: ${file.type || file.name}. Supported: CSV, TSV, JSON, Parquet.` }, { status: 415 });
+      return NextResponse.json({ error: `Unsupported file type: ${file.type || file.name}. Supported: CSV, TSV, JSON.` }, { status: 415 });
     }
 
     // Save to a generated path under upload/

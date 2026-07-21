@@ -72,10 +72,10 @@ export async function schedulerTick(): Promise<SchedulerTickResult> {
         const result = await executeClickHouseQuery({
           sql: `${dataset.code} LIMIT 1000`,
           connector: {
-            host: connector.host!,
-            port: connector.port!,
-            database: connector.database!,
-            username: connector.username!,
+            host: connector.host ?? '',
+            port: connector.port ?? 0,
+            database: connector.database ?? '',
+            username: connector.username ?? '',
             password: connector.password ?? '',
           },
           timeout: 300_000,
