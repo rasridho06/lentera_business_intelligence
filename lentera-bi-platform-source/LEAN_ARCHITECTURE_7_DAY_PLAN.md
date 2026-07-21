@@ -2,6 +2,7 @@
 
 **Period:** 20-26 July 2026
 **Rule:** one day, one phase, one measurable result.
+**Status:** ✅ COMPLETE — all 7 phases merged to `main`.
 
 ## Target outcome
 
@@ -20,18 +21,44 @@ Lentera is not only a BI builder. It is a change-safe BI workspace: every semant
 1. ✓ [Day 1 - Runtime and baseline](docs/architecture-phases/01-runtime-baseline.md) — merged PR #2
 2. ✓ [Day 2 - Route-based application shell](docs/architecture-phases/02-route-based-shell.md) — merged PR #3
 3. ✓ [Day 3 - Client boundaries and bundle](docs/architecture-phases/03-client-boundary-bundle.md) — merged PR #5
-4. → [Day 4 - Local metadata, revisions, audit, and job definitions](docs/architecture-phases/04-sqlite-metadata.md) — PR open
-5. [Day 5 - Secure query plane, Python execution, and virtual datasets](docs/architecture-phases/05-server-query-plane.md)
-6. [Day 6 - Universal ingestion, BI authoring, and scheduled refresh](docs/architecture-phases/06-duckdb-bi-core-flow.md)
-7. [Day 7 - Change-safe semantic governance](docs/architecture-phases/07-lineage-final-hardening.md)
+4. ✓ [Day 4 - Local metadata, revisions, audit, and job definitions](docs/architecture-phases/04-sqlite-metadata.md) — merged PR #7
+5. ✓ [Day 5 - Secure query plane, Python execution, and virtual datasets](docs/architecture-phases/05-server-query-plane.md) — merged PR #8 + #9
+6. ✓ [Day 6 - Universal ingestion, BI authoring, and scheduled refresh](docs/architecture-phases/06-duckdb-bi-core-flow.md) — merged PR #10
+7. ✓ [Day 7 - Change-safe semantic governance](docs/architecture-phases/07-lineage-final-hardening.md) — merged PR #11
 
-_Also: [Phase 2/3 hygiene patch](docs/architecture-phases/02-route-based-shell.md) — merged PR #6 (cross-phase regression + side-effect + wasm asset fix from main; not a standalone phase)._
+_Also:_
+- [Phase 2/3 hygiene patch](docs/architecture-phases/02-route-based-shell.md) — merged PR #6 (cross-phase regression + side-effect + wasm asset fix)
+- [Phase status + cross-phase notes](docs/architecture-phases/02-route-based-shell.md) — merged PR #7
+
+## Architecture at a glance (post-Phase 7)
+
+| Layer | Provides | Key modules |
+|---|---|---|
+| **Runtime** (Phase 1) | Cross-platform standalone build, Windows-compatible | `scripts/prepare-standalone.mjs` |
+| **Routes** (Phase 2) | URL-driven feature navigation, auth proxy | `src/app/(platform)/[view]/`, `src/proxy.ts` |
+| **Client** (Phase 3) | Route-scoped bundles, dynamic imports | `src/components/home-client.tsx`, `next/dynamic` |
+| **Metadata** (Phase 4) | SQLite metadata, immutable revisions, audit events, job scheduler schema | `prisma/schema.prisma`, `src/lib/revisions.ts` |
+| **Query plane** (Phase 5) | Read-only SQL contract, ClickHouse adapter, virtual dataset validation, dependency tracking, cycle detection, semantic contracts, bounded preview | `src/lib/query/`, `src/app/api/query/`, `src/app/api/datasets/` |
+| **Ingestion** (Phase 6) | CSV/TSV/JSON file upload, type inference, SQLite-backed scheduler runner | `src/lib/ingest/`, `src/lib/scheduler/` |
+| **Governance** (Phase 7) | Relationship manager, impact analysis (BFS), audit timeline | `src/lib/governance/`, `src/app/api/relationships/`, `src/app/api/governance/` |
+
+## Final metrics
+
+| Metric | Value |
+|---|---|
+| Total test files | 14 |
+| Total tests | 242 |
+| API routes | 23 |
+| Prisma migrations | 6 |
+| Governed asset types | 7 (connector, table, dataset, metric, relationship, chart, dashboard) |
+| Total PRs | 11 |
 
 ## Scope boundaries
 
 - One Next.js application; no new microservices.
 - SQLite stores local metadata, revisions, audit events, semantic definitions, and relationship definitions.
-- DuckDB analyzes uploaded CSV, XLSX, and Parquet files on the server; ClickHouse is the first external connector.
+- PapaParse-based CSV/TSV/JSON ingestion; DuckDB upgrade path documented for Parquet.
+- ClickHouse is the first external connector via HTTP adapter (no client library).
 - Full files and connector secrets never enter browser memory or API responses.
 - Git-like history means immutable asset revisions, diffs, approval state, and restore inside Lentera. It does not mean embedding a Git server.
 - Column-level dependency capture is limited to SQL expressions that can be parsed confidently. Unknown expressions remain table-level and are labeled as such.
