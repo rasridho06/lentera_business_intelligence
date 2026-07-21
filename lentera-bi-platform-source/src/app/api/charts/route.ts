@@ -88,8 +88,17 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
   try {
+    const chart = await db.chart.findUnique({ where: { id }, select: { name: true } });
     await db.chartMetric.deleteMany({ where: { chartId: id } });
     await db.chart.delete({ where: { id } });
+    // Phase 5 fix: clean up lineage Node and related Edges.
+    if (chart) {
+      const node = await db.node.findFirst({ where: { name: chart.name, nodeType: 'chart' } });
+      if (node) {
+        await db.edge.deleteMany({ where: { OR: [{ sourceNodeId: node.id }, { targetNodeId: node.id }] } });
+        await db.node.delete({ where: { id: node.id } });
+      }
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Chart DELETE error:', error);
